@@ -1,0 +1,86 @@
+import type OpenAI from "openai";
+import type {
+  ChatCompletionMessageParam,
+  ChatCompletionMessage,
+} from "openai/resources/chat/completions";
+import type { Message } from "./types.js";
+import { tools, executeTool } from "./tools/index.js";
+
+const MAX_ITERATIONS = 10;
+
+export class Agent {
+  private messages: Message[] = [];
+  private client: OpenAI;
+  private model: string;
+
+  constructor(client: OpenAI, model: string, systemPrompt: string) {
+    this.client = client;
+    this.model = model;
+    this.messages = [{ role: "system", content: systemPrompt }];
+  }
+
+  getMessages(): Message[] {
+    return this.messages;
+  }
+
+  reset(systemPrompt?: string): void {
+    const prompt =
+      systemPrompt ??
+      (this.messages[0]?.role === "system"
+        ? (this.messages[0].content as string)
+        : "");
+    this.messages = [{ role: "system", content: prompt }];
+  }
+
+  async run(userInput: string): Promise<string> {
+    this.addMessage({ role: "user", content: userInput });
+
+    for (let i = 0; i < MAX_ITERATIONS; i++) {
+      const message = await this.callLLM();
+      if (!message) return "(no response)";
+
+      this.addMessage(message);
+
+      const toolCalls = this.extractToolCalls(message);
+      if (!toolCalls) {
+        return message.content ?? "(no response)";
+      }
+
+      await this.executeToolCalls(toolCalls);
+    }
+
+    return "(max iterations reached)";
+  }
+
+  private addMessage(message: ChatCompletionMessageParam): void {
+    this.messages.push(message);
+  }
+
+  private async callLLM(): Promise<ChatCompletionMessage | null> {
+    const response = await this.client.chat.completions.create({
+      model: this.model,
+      messages: this.messages,
+      tools,
+    });
+    return response.choices[0]?.message ?? null;
+  }
+
+  private extractToolCalls(message: ChatCompletionMessage) {
+    const calls = message.tool_calls;
+    if (!calls || calls.length === 0) return null;
+    return calls.filter((tc) => tc.type === "function");
+  }
+
+  private async executeToolCalls(
+    toolCalls: Array<{ id: string; function: { name: string; arguments: string } }>
+  ): Promise<void> {
+    for (const tc of toolCalls) {
+      const result = await executeTool(tc.function.name, tc.function.arguments);
+      this.addMessage({
+        role: "tool",
+        tool_call_id: tc.id,
+        content: result,
+      });
+    }
+  }
+}

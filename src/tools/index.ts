@@ -3,6 +3,20 @@ import { shellToolDef, executeShell } from "./shell.js";
 
 export const tools: ChatCompletionTool[] = [shellToolDef];
 
+export function formatToolArgs(name: string, argsJson: string): string {
+  try {
+    const parsed = JSON.parse(argsJson);
+    switch (name) {
+      case "shell":
+        return parsed.command ?? argsJson;
+      default:
+        return argsJson;
+    }
+  } catch {
+    return argsJson;
+  }
+}
+
 export async function executeTool(
   name: string,
   args: string

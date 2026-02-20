@@ -3,18 +3,20 @@ import type {
   ChatCompletionMessageParam,
   ChatCompletionMessage,
 } from "openai/resources/chat/completions";
-import type { Message, ToolActivity, TokenUsage } from "./types.js";
+import type { Message, ToolActivity, ToolApprovalRequest, TokenUsage } from "./types.js";
 import { tools, executeTool } from "./tools/index.js";
 
 const MAX_ITERATIONS = 10;
 
 export type OnToolActivity = (activity: ToolActivity) => void;
+export type OnToolApproval = (request: ToolApprovalRequest) => void;
 
 export class Agent {
   private messages: Message[] = [];
   private client: OpenAI;
   private model: string;
   private onToolActivity?: OnToolActivity;
+  private onToolApproval?: OnToolApproval;
   private lastUsage: TokenUsage = { promptTokens: 0, totalTokens: 0 };
 
   constructor(client: OpenAI, model: string, systemPrompt: string) {
@@ -25,6 +27,10 @@ export class Agent {
 
   setOnToolActivity(cb: OnToolActivity): void {
     this.onToolActivity = cb;
+  }
+
+  setOnToolApproval(cb: OnToolApproval): void {
+    this.onToolApproval = cb;
   }
 
   getMessages(): Message[] {
@@ -91,6 +97,13 @@ export class Agent {
     return calls.filter((tc) => tc.type === "function");
   }
 
+  private async requestApproval(name: string, args: string): Promise<boolean> {
+    if (!this.onToolApproval) return true;
+    return new Promise<boolean>((resolve) => {
+      this.onToolApproval!({ name, args, resolve });
+    });
+  }
+
   private async executeToolCalls(
     toolCalls: Array<{ id: string; function: { name: string; arguments: string } }>
   ): Promise<void> {
@@ -100,6 +113,23 @@ export class Agent {
         args: tc.function.arguments,
         result: null,
       });
+
+      const approved = await this.requestApproval(tc.function.name, tc.function.arguments);
+
+      if (!approved) {
+        const denial = "Tool execution denied by user.";
+        this.onToolActivity?.({
+          name: tc.function.name,
+          args: tc.function.arguments,
+          result: denial,
+        });
+        this.addMessage({
+          role: "tool",
+          tool_call_id: tc.id,
+          content: denial,
+        });
+        continue;
+      }
 
       const result = await executeTool(tc.function.name, tc.function.arguments);
 

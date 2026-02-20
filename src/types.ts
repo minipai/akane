@@ -13,6 +13,12 @@ export interface TokenUsage {
   totalTokens: number;
 }
 
+export interface ToolApprovalRequest {
+  name: string;
+  args: string;
+  resolve: (approved: boolean) => void;
+}
+
 export interface Config {
   apiKey: string;
   baseUrl: string;

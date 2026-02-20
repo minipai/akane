@@ -6,7 +6,8 @@ import ToolPanel from "./ToolPanel.js";
 import InputBar from "./InputBar.js";
 import StatusBar from "./StatusBar.js";
 import type { Agent } from "../agent.js";
-import type { Message, ToolActivity, TokenUsage } from "../types.js";
+import type { Message, ToolActivity, ToolApprovalRequest, TokenUsage } from "../types.js";
+import { formatToolArgs } from "../tools/index.js";
 
 interface Props {
   agent: Agent;
@@ -20,10 +21,19 @@ export default function App({ agent, model, contextLimit }: Props) {
   const [loading, setLoading] = useState(false);
   const [toolActivity, setToolActivity] = useState<ToolActivity | null>(null);
   const [tokenUsage, setTokenUsage] = useState<TokenUsage>({ promptTokens: 0, totalTokens: 0 });
+  const [pendingApproval, setPendingApproval] = useState<ToolApprovalRequest | null>(null);
 
   useEffect(() => {
     agent.setOnToolActivity(setToolActivity);
+    agent.setOnToolApproval(setPendingApproval);
   }, [agent]);
+
+  const handleApproval = useCallback((approved: boolean) => {
+    if (pendingApproval) {
+      pendingApproval.resolve(approved);
+      setPendingApproval(null);
+    }
+  }, [pendingApproval]);
 
   const handleSubmit = useCallback(
     async (text: string) => {
@@ -68,19 +78,40 @@ export default function App({ agent, model, contextLimit }: Props) {
 
       {loading && (
         <Box flexDirection="column">
-          <ToolPanel activity={toolActivity} />
-          <Box>
-            <Text color="yellow">
-              <Spinner type="dots" />{" "}
-            </Text>
-            <Text dimColor>
-              {toolActivity ? `Running ${toolActivity.name}...` : "Thinking..."}
-            </Text>
-          </Box>
+          {pendingApproval ? (
+            <Box>
+              <Text>Allow {pendingApproval.name} </Text>
+              {pendingApproval.args !== "{}" && (
+                <Text color="cyan" bold>{formatToolArgs(pendingApproval.name, pendingApproval.args)}</Text>
+              )}
+              <Text dimColor> ?</Text>
+            </Box>
+          ) : (
+            <>
+              <ToolPanel activity={toolActivity} />
+              <Box>
+                <Text color="yellow">
+                  <Spinner type="dots" />{" "}
+                </Text>
+                <Text dimColor>
+                  {toolActivity ? `Running ${toolActivity.name}...` : "Thinking..."}
+                </Text>
+              </Box>
+            </>
+          )}
         </Box>
       )}
 
-      <InputBar onSubmit={handleSubmit} disabled={loading} />
+      {pendingApproval ? (
+        <InputBar
+          onSubmit={() => {}}
+          disabled={false}
+          approvalMode={true}
+          onApproval={handleApproval}
+        />
+      ) : (
+        <InputBar onSubmit={handleSubmit} disabled={loading} />
+      )}
       <StatusBar usage={tokenUsage} contextLimit={contextLimit} model={model} />
     </Box>
   );

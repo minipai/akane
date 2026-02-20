@@ -4,19 +4,22 @@ import Spinner from "ink-spinner";
 import MessageList from "./MessageList.js";
 import ToolPanel from "./ToolPanel.js";
 import InputBar from "./InputBar.js";
+import StatusBar from "./StatusBar.js";
 import type { Agent } from "../agent.js";
-import type { Message, ToolActivity } from "../types.js";
+import type { Message, ToolActivity, TokenUsage } from "../types.js";
 
 interface Props {
   agent: Agent;
   model: string;
+  contextLimit: number;
 }
 
-export default function App({ agent, model }: Props) {
+export default function App({ agent, model, contextLimit }: Props) {
   const { exit } = useApp();
   const [messages, setMessages] = useState<Message[]>(agent.getMessages());
   const [loading, setLoading] = useState(false);
   const [toolActivity, setToolActivity] = useState<ToolActivity | null>(null);
+  const [tokenUsage, setTokenUsage] = useState<TokenUsage>({ promptTokens: 0, totalTokens: 0 });
 
   useEffect(() => {
     agent.setOnToolActivity(setToolActivity);
@@ -36,6 +39,7 @@ export default function App({ agent, model }: Props) {
       try {
         await agent.run(text);
         setMessages([...agent.getMessages()]);
+        setTokenUsage(agent.getTokenUsage());
       } catch (err: unknown) {
         const errMsg =
           err instanceof Error ? err.message : "Unknown error";
@@ -77,6 +81,7 @@ export default function App({ agent, model }: Props) {
       )}
 
       <InputBar onSubmit={handleSubmit} disabled={loading} />
+      <StatusBar usage={tokenUsage} contextLimit={contextLimit} model={model} />
     </Box>
   );
 }

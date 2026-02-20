@@ -3,7 +3,7 @@ import type {
   ChatCompletionMessageParam,
   ChatCompletionMessage,
 } from "openai/resources/chat/completions";
-import type { Message, ToolActivity } from "./types.js";
+import type { Message, ToolActivity, TokenUsage } from "./types.js";
 import { tools, executeTool } from "./tools/index.js";
 
 const MAX_ITERATIONS = 10;
@@ -15,6 +15,7 @@ export class Agent {
   private client: OpenAI;
   private model: string;
   private onToolActivity?: OnToolActivity;
+  private lastUsage: TokenUsage = { promptTokens: 0, totalTokens: 0 };
 
   constructor(client: OpenAI, model: string, systemPrompt: string) {
     this.client = client;
@@ -28,6 +29,10 @@ export class Agent {
 
   getMessages(): Message[] {
     return this.messages;
+  }
+
+  getTokenUsage(): TokenUsage {
+    return this.lastUsage;
   }
 
   reset(systemPrompt?: string): void {
@@ -69,6 +74,14 @@ export class Agent {
       messages: this.messages,
       tools,
     });
+
+    if (response.usage) {
+      this.lastUsage = {
+        promptTokens: response.usage.prompt_tokens,
+        totalTokens: response.usage.total_tokens,
+      };
+    }
+
     return response.choices[0]?.message ?? null;
   }
 

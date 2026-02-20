@@ -10,4 +10,4 @@ const { client, model } = createClient(config);
 const systemPrompt = buildSystemPrompt();
 const agent = new Agent(client, model, systemPrompt);
 
-render(<App agent={agent} model={model} />);
+render(<App agent={agent} model={model} contextLimit={config.contextLimit} />);

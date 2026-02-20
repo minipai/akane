@@ -8,8 +8,14 @@ export interface ToolActivity {
   result: string | null;
 }
 
+export interface TokenUsage {
+  promptTokens: number;
+  totalTokens: number;
+}
+
 export interface Config {
   apiKey: string;
   baseUrl: string;
   model: string;
+  contextLimit: number;
 }

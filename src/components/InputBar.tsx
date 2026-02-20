@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Box, Text } from "ink";
+import React, { useState, useRef } from "react";
+import { Box, Text, useInput } from "ink";
 import TextInput from "ink-text-input";
 
 interface Props {
@@ -11,9 +11,36 @@ interface Props {
 
 export default function InputBar({ onSubmit, disabled, approvalMode, onApproval }: Props) {
   const [value, setValue] = useState("");
+  const historyRef = useRef<string[]>([]);
+  const historyIndexRef = useRef(-1);
+  const draftRef = useRef("");
+
+  useInput((_input, key) => {
+    if (disabled || approvalMode) return;
+    const history = historyRef.current;
+    if (key.upArrow && history.length > 0) {
+      const newIndex = Math.min(historyIndexRef.current + 1, history.length - 1);
+      if (historyIndexRef.current === -1) {
+        draftRef.current = value;
+      }
+      historyIndexRef.current = newIndex;
+      setValue(history[history.length - 1 - newIndex]);
+    } else if (key.downArrow) {
+      if (historyIndexRef.current <= 0) {
+        historyIndexRef.current = -1;
+        setValue(draftRef.current);
+      } else {
+        historyIndexRef.current -= 1;
+        setValue(history[history.length - 1 - historyIndexRef.current]);
+      }
+    }
+  });
 
   const handleSubmit = (text: string) => {
     if (!text.trim()) return;
+    historyRef.current.push(text.trim());
+    historyIndexRef.current = -1;
+    draftRef.current = "";
     onSubmit(text.trim());
     setValue("");
   };

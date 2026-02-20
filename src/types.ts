@@ -12,5 +12,4 @@ export interface Config {
   apiKey: string;
   baseUrl: string;
   model: string;
-  systemPrompt: string;
 }

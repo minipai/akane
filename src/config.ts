@@ -5,7 +5,6 @@ const config: Config = {
   apiKey: process.env.OPENAI_API_KEY ?? "",
   baseUrl: "https://api.openai.com/v1",
   model: "gpt-4.1-mini",
-  systemPrompt: "You are a helpful assistant.",
 };
 
 export default config;

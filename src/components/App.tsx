@@ -1,10 +1,11 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Box, Text, useApp } from "ink";
 import Spinner from "ink-spinner";
 import MessageList from "./MessageList.js";
+import ToolPanel from "./ToolPanel.js";
 import InputBar from "./InputBar.js";
 import type { Agent } from "../agent.js";
-import type { Message } from "../types.js";
+import type { Message, ToolActivity } from "../types.js";
 
 interface Props {
   agent: Agent;
@@ -15,6 +16,11 @@ export default function App({ agent, model }: Props) {
   const { exit } = useApp();
   const [messages, setMessages] = useState<Message[]>(agent.getMessages());
   const [loading, setLoading] = useState(false);
+  const [toolActivity, setToolActivity] = useState<ToolActivity | null>(null);
+
+  useEffect(() => {
+    agent.setOnToolActivity(setToolActivity);
+  }, [agent]);
 
   const handleSubmit = useCallback(
     async (text: string) => {
@@ -25,6 +31,7 @@ export default function App({ agent, model }: Props) {
 
       setMessages([...agent.getMessages(), { role: "user", content: text }]);
       setLoading(true);
+      setToolActivity(null);
 
       try {
         await agent.run(text);
@@ -38,6 +45,7 @@ export default function App({ agent, model }: Props) {
         ]);
       } finally {
         setLoading(false);
+        setToolActivity(null);
       }
     },
     [agent, exit]
@@ -55,11 +63,16 @@ export default function App({ agent, model }: Props) {
       <MessageList messages={messages} />
 
       {loading && (
-        <Box>
-          <Text color="yellow">
-            <Spinner type="dots" />{" "}
-          </Text>
-          <Text dimColor>Thinking...</Text>
+        <Box flexDirection="column">
+          <ToolPanel activity={toolActivity} />
+          <Box>
+            <Text color="yellow">
+              <Spinner type="dots" />{" "}
+            </Text>
+            <Text dimColor>
+              {toolActivity ? `Running ${toolActivity.name}...` : "Thinking..."}
+            </Text>
+          </Box>
         </Box>
       )}
 

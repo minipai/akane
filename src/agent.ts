@@ -3,20 +3,27 @@ import type {
   ChatCompletionMessageParam,
   ChatCompletionMessage,
 } from "openai/resources/chat/completions";
-import type { Message } from "./types.js";
+import type { Message, ToolActivity } from "./types.js";
 import { tools, executeTool } from "./tools/index.js";
 
 const MAX_ITERATIONS = 10;
+
+export type OnToolActivity = (activity: ToolActivity) => void;
 
 export class Agent {
   private messages: Message[] = [];
   private client: OpenAI;
   private model: string;
+  private onToolActivity?: OnToolActivity;
 
   constructor(client: OpenAI, model: string, systemPrompt: string) {
     this.client = client;
     this.model = model;
     this.messages = [{ role: "system", content: systemPrompt }];
+  }
+
+  setOnToolActivity(cb: OnToolActivity): void {
+    this.onToolActivity = cb;
   }
 
   getMessages(): Message[] {
@@ -75,7 +82,20 @@ export class Agent {
     toolCalls: Array<{ id: string; function: { name: string; arguments: string } }>
   ): Promise<void> {
     for (const tc of toolCalls) {
+      this.onToolActivity?.({
+        name: tc.function.name,
+        args: tc.function.arguments,
+        result: null,
+      });
+
       const result = await executeTool(tc.function.name, tc.function.arguments);
+
+      this.onToolActivity?.({
+        name: tc.function.name,
+        args: tc.function.arguments,
+        result,
+      });
+
       this.addMessage({
         role: "tool",
         tool_call_id: tc.id,

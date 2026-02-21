@@ -1,11 +1,32 @@
 import type { ChatCompletionTool } from "openai/resources/chat/completions";
 import { shellToolDef, executeShell } from "./shell.js";
 import { emotionToolDef, executeEmotion } from "./emotion.js";
+import {
+  noteAboutUserToolDef,
+  getUserFactsToolDef,
+  updateUserFactToolDef,
+  executeNoteAboutUser,
+  executeGetUserFacts,
+  executeUpdateUserFact,
+} from "./user-facts.js";
 
-export const tools: ChatCompletionTool[] = [shellToolDef, emotionToolDef];
+export { setUserFactsContext } from "./user-facts.js";
+
+export const tools: ChatCompletionTool[] = [
+  shellToolDef,
+  emotionToolDef,
+  noteAboutUserToolDef,
+  getUserFactsToolDef,
+  updateUserFactToolDef,
+];
 
 /** Tools that are auto-approved (no user confirmation needed). */
-export const autoApprovedTools = new Set(["set_emotion"]);
+export const autoApprovedTools = new Set([
+  "set_emotion",
+  "note_about_user",
+  "get_user_facts",
+  "update_user_fact",
+]);
 
 export function formatToolArgs(name: string, argsJson: string): string {
   try {
@@ -15,6 +36,13 @@ export function formatToolArgs(name: string, argsJson: string): string {
         return parsed.command ?? argsJson;
       case "set_emotion":
         return parsed.emotion ?? argsJson;
+      case "note_about_user":
+        return `[${parsed.category}] ${parsed.fact}`;
+      case "get_user_facts":
+        return parsed.category ?? argsJson;
+      case "update_user_fact":
+        if (parsed.delete) return `delete #${parsed.id}`;
+        return `#${parsed.id}: ${parsed.fact ?? argsJson}`;
       default:
         return argsJson;
     }
@@ -34,6 +62,12 @@ export async function executeTool(
       return executeShell(parsed.command);
     case "set_emotion":
       return executeEmotion(parsed.emotion);
+    case "note_about_user":
+      return executeNoteAboutUser(parsed.category, parsed.fact);
+    case "get_user_facts":
+      return executeGetUserFacts(parsed.category);
+    case "update_user_fact":
+      return executeUpdateUserFact(parsed.id, parsed.fact, parsed.delete);
     default:
       return `Unknown tool: ${name}`;
   }

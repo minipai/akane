@@ -6,6 +6,8 @@ import type {
 import type { Message, ChatEntry, ToolActivity, ToolApprovalRequest, TokenUsage } from "./types.js";
 import { tools, executeTool, autoApprovedTools } from "./tools/index.js";
 import { saveMessage } from "./memory/index.js";
+import { getKv } from "./memory/kv.js";
+import { generateNextQuestion } from "./memory/user-facts.js";
 
 const MAX_ITERATIONS = 10;
 
@@ -71,8 +73,22 @@ export class Agent {
     this.currentEmotion = "neutral";
   }
 
+  private isFirstUserMessage = true;
+
   async run(userInput: string): Promise<string> {
     this.addMessage({ role: "user", content: userInput });
+
+    // Nudge the model to ask a personal question on casual greetings
+    if (this.isFirstUserMessage && userInput.trim().length < 20) {
+      const question = getKv("next_question");
+      const nudge = question
+        ? `After greeting, you MUST ask this exact question (translate to the conversation language if needed): ${question}`
+        : "Greet the user and casually ask something about themselves to get to know them better.";
+      this.messages.push({ role: "developer", content: nudge } as any);
+      // Pre-generate a fresh question for next session
+      generateNextQuestion(this.client, this.model).catch(() => {});
+    }
+    this.isFirstUserMessage = false;
 
     for (let i = 0; i < MAX_ITERATIONS; i++) {
       const message = await this.callLLM();

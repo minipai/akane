@@ -58,14 +58,14 @@ export function endConversation(
     .run();
 }
 
-export function getTodaySummaries(): string[] {
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+export function getRecentSummaries(limit = 2): string[] {
   const db = getDb();
   const rows = db
     .select({ summary: conversations.summary })
     .from(conversations)
-    .where(and(isNotNull(conversations.summary), gte(conversations.startedAt, today)))
+    .where(isNotNull(conversations.summary))
     .orderBy(desc(conversations.startedAt))
+    .limit(limit)
     .all();
   return rows.map((r) => r.summary!);
 }

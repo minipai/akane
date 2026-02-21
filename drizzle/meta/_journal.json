@@ -15,6 +15,20 @@
       "when": 1771678998332,
       "tag": "0001_slippery_ironclad",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1771707776840,
+      "tag": "0002_eminent_wallop",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1771713826727,
+      "tag": "0003_purple_marrow",
+      "breakpoints": true
     }
   ]
 }

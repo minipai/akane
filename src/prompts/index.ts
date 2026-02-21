@@ -30,6 +30,7 @@ export interface MemoryContext {
   monthlies: string[];
   quarterlies: string[];
   yearlies: string[];
+  userProfile: Record<string, string>;
 }
 
 export function buildSystemPrompt(memory?: MemoryContext): string {
@@ -37,7 +38,17 @@ export function buildSystemPrompt(memory?: MemoryContext): string {
   const agent = readPromptFile("AGENT.md");
   const user = readPromptFile("USER.md");
 
-  let raw = `# Identity\n${identity}\n\n# Agent\n${agent}\n\n# User\n${user}`;
+  let raw = `# Agent\n${agent}\n\n# Identity\n${identity}\n\n# User\n${user}`;
+
+  if (memory) {
+    const profileEntries = Object.entries(memory.userProfile);
+    if (profileEntries.length > 0) {
+      const profileSections = profileEntries
+        .map(([category, summary]) => `## ${category.charAt(0).toUpperCase() + category.slice(1)}\n${summary}`)
+        .join("\n\n");
+      raw += `\n\n# User Profile\n${profileSections}`;
+    }
+  }
 
   const sections: string[] = [];
 
@@ -64,7 +75,7 @@ export function buildSystemPrompt(memory?: MemoryContext): string {
 
     if (memory.todaySummaries.length > 0) {
       const items = memory.todaySummaries.map((s) => `- ${s}`).join("\n");
-      raw += `\n\n# Earlier today\nHere's what we talked about earlier:\n${items}`;
+      raw += `\n\n# Recent conversations\n${items}`;
     }
   }
 

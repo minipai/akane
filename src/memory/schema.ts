@@ -29,3 +29,24 @@ export const diary = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.type, table.date] })],
 );
+
+// category: identity | relations | career | preferences | mindset | timeline
+export const userFacts = sqliteTable("user_facts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  category: text("category").notNull(),
+  fact: text("fact").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const userProfile = sqliteTable("user_profile", {
+  category: text("category").primaryKey(),
+  summary: text("summary").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const kvStore = sqliteTable("kv_store", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});

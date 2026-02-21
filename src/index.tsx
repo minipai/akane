@@ -9,10 +9,13 @@ import {
   initMemory,
   createConversation,
   endConversation,
-  getTodaySummaries,
+  getRecentSummaries,
   getRecentDiaries,
   generateDiary,
 } from "./memory/index.js";
+import { getAllProfiles, generateNextQuestion } from "./memory/user-facts.js";
+import { setUserFactsContext } from "./tools/index.js";
+import { getKv } from "./memory/kv.js";
 import App from "./components/App.js";
 
 // Initialize memory and load previous summaries
@@ -23,14 +26,23 @@ const { client, model } = createClient(config);
 // Fire-and-forget diary generation (don't block startup)
 generateDiary(client, model);
 
+// Wire up client/model for user-facts tool (needs LLM for profile regeneration)
+setUserFactsContext(client, model);
+
+// Seed opener question on first run only (fire-and-forget)
+if (!getKv("next_question")) {
+  generateNextQuestion(client, model).catch(() => {});
+}
+
 // Build memory context from DB
 const memory: MemoryContext = {
-  todaySummaries: getTodaySummaries(),
+  todaySummaries: getRecentSummaries(3),
   dailies: getRecentDiaries("daily", 7),
   weeklies: getRecentDiaries("weekly", 3),
   monthlies: getRecentDiaries("monthly", 2),
   quarterlies: getRecentDiaries("quarterly", 3),
   yearlies: getRecentDiaries("yearly", 3),
+  userProfile: getAllProfiles(),
 };
 
 const conversationId = createConversation();

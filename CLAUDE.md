@@ -10,6 +10,14 @@ npm run dev        # runs tsx src/index.tsx
 
 Requires `OPENAI_API_KEY` in `.env` file. Uses `gpt-4.1-mini` by default (see `src/config.ts`).
 
+### Persona env vars (in `.env`)
+
+- `KANA_NAME` — Kana's display name (default placeholder: `{{KANA_NAME}}`)
+- `USER_NAME` — user's real name (default placeholder: `{{USER_NAME}}`)
+- `USER_NICKNAME` — how Kana addresses the user (default placeholder: `{{USER_NICKNAME}}`)
+
+These replace `{{…}}` placeholders in the prompt markdown files at runtime.
+
 ## Architecture
 
 ```

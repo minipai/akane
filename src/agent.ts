@@ -3,26 +3,31 @@ import type {
   ChatCompletionMessageParam,
   ChatCompletionMessage,
 } from "openai/resources/chat/completions";
-import type { Message, ToolActivity, ToolApprovalRequest, TokenUsage } from "./types.js";
-import { tools, executeTool } from "./tools/index.js";
+import type { Message, ChatEntry, ToolActivity, ToolApprovalRequest, TokenUsage } from "./types.js";
+import { tools, executeTool, autoApprovedTools } from "./tools/index.js";
 
 const MAX_ITERATIONS = 10;
 
 export type OnToolActivity = (activity: ToolActivity) => void;
 export type OnToolApproval = (request: ToolApprovalRequest) => void;
+export type OnEmotionChange = (emotion: string) => void;
 
 export class Agent {
   private messages: Message[] = [];
+  private entries: ChatEntry[] = [];
+  private currentEmotion: string = "neutral";
   private client: OpenAI;
   private model: string;
   private onToolActivity?: OnToolActivity;
   private onToolApproval?: OnToolApproval;
+  private onEmotionChange?: OnEmotionChange;
   private lastUsage: TokenUsage = { promptTokens: 0, totalTokens: 0 };
 
   constructor(client: OpenAI, model: string, systemPrompt: string) {
     this.client = client;
     this.model = model;
     this.messages = [{ role: "system", content: systemPrompt }];
+    this.entries = [{ message: this.messages[0] }];
   }
 
   setOnToolActivity(cb: OnToolActivity): void {
@@ -33,8 +38,16 @@ export class Agent {
     this.onToolApproval = cb;
   }
 
+  setOnEmotionChange(cb: OnEmotionChange): void {
+    this.onEmotionChange = cb;
+  }
+
   getMessages(): Message[] {
     return this.messages;
+  }
+
+  getEntries(): ChatEntry[] {
+    return this.entries;
   }
 
   getTokenUsage(): TokenUsage {
@@ -48,6 +61,8 @@ export class Agent {
         ? (this.messages[0].content as string)
         : "");
     this.messages = [{ role: "system", content: prompt }];
+    this.entries = [{ message: this.messages[0] }];
+    this.currentEmotion = "neutral";
   }
 
   async run(userInput: string): Promise<string> {
@@ -72,6 +87,11 @@ export class Agent {
 
   private addMessage(message: ChatCompletionMessageParam): void {
     this.messages.push(message);
+    const entry: ChatEntry = { message };
+    if (message.role === "assistant") {
+      entry.emotion = this.currentEmotion;
+    }
+    this.entries.push(entry);
   }
 
   private async callLLM(): Promise<ChatCompletionMessage | null> {
@@ -108,36 +128,48 @@ export class Agent {
     toolCalls: Array<{ id: string; function: { name: string; arguments: string } }>
   ): Promise<void> {
     for (const tc of toolCalls) {
-      this.onToolActivity?.({
-        name: tc.function.name,
-        args: tc.function.arguments,
-        result: null,
-      });
+      const isAutoApproved = autoApprovedTools.has(tc.function.name);
 
-      const approved = await this.requestApproval(tc.function.name, tc.function.arguments);
-
-      if (!approved) {
-        const denial = "Tool execution denied by user.";
+      if (!isAutoApproved) {
         this.onToolActivity?.({
           name: tc.function.name,
           args: tc.function.arguments,
-          result: denial,
+          result: null,
         });
-        this.addMessage({
-          role: "tool",
-          tool_call_id: tc.id,
-          content: denial,
-        });
-        continue;
+
+        const approved = await this.requestApproval(tc.function.name, tc.function.arguments);
+
+        if (!approved) {
+          const denial = "Tool execution denied by user.";
+          this.onToolActivity?.({
+            name: tc.function.name,
+            args: tc.function.arguments,
+            result: denial,
+          });
+          this.addMessage({
+            role: "tool",
+            tool_call_id: tc.id,
+            content: denial,
+          });
+          continue;
+        }
       }
 
       const result = await executeTool(tc.function.name, tc.function.arguments);
 
-      this.onToolActivity?.({
-        name: tc.function.name,
-        args: tc.function.arguments,
-        result,
-      });
+      if (tc.function.name === "set_emotion") {
+        try {
+          const parsed = JSON.parse(tc.function.arguments);
+          this.currentEmotion = parsed.emotion;
+          this.onEmotionChange?.(parsed.emotion);
+        } catch {}
+      } else {
+        this.onToolActivity?.({
+          name: tc.function.name,
+          args: tc.function.arguments,
+          result,
+        });
+      }
 
       this.addMessage({
         role: "tool",

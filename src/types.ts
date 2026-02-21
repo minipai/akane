@@ -2,6 +2,11 @@ import type { ChatCompletionMessageParam } from "openai/resources/chat/completio
 
 export type Message = ChatCompletionMessageParam;
 
+export interface ChatEntry {
+  message: Message;
+  emotion?: string;
+}
+
 export interface ToolActivity {
   name: string;
   args: string;

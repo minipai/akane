@@ -6,7 +6,7 @@ import ToolPanel from "./ToolPanel.js";
 import InputBar from "./InputBar.js";
 import StatusBar from "./StatusBar.js";
 import type { Agent } from "../agent.js";
-import type { Message, ToolActivity, ToolApprovalRequest, TokenUsage } from "../types.js";
+import type { ChatEntry, ToolActivity, ToolApprovalRequest, TokenUsage } from "../types.js";
 import { formatToolArgs } from "../tools/index.js";
 
 interface Props {
@@ -17,7 +17,7 @@ interface Props {
 
 export default function App({ agent, model, contextLimit }: Props) {
   const { exit } = useApp();
-  const [messages, setMessages] = useState<Message[]>(agent.getMessages());
+  const [entries, setEntries] = useState<ChatEntry[]>(agent.getEntries());
   const [loading, setLoading] = useState(false);
   const [toolActivity, setToolActivity] = useState<ToolActivity | null>(null);
   const [tokenUsage, setTokenUsage] = useState<TokenUsage>({ promptTokens: 0, totalTokens: 0 });
@@ -42,20 +42,20 @@ export default function App({ agent, model, contextLimit }: Props) {
         return;
       }
 
-      setMessages([...agent.getMessages(), { role: "user", content: text }]);
+      setEntries([...agent.getEntries(), { message: { role: "user", content: text } }]);
       setLoading(true);
       setToolActivity(null);
 
       try {
         await agent.run(text);
-        setMessages([...agent.getMessages()]);
+        setEntries([...agent.getEntries()]);
         setTokenUsage(agent.getTokenUsage());
       } catch (err: unknown) {
         const errMsg =
           err instanceof Error ? err.message : "Unknown error";
-        setMessages((prev) => [
+        setEntries((prev) => [
           ...prev,
-          { role: "assistant", content: `Error: ${errMsg}` },
+          { message: { role: "assistant", content: `Error: ${errMsg}` } },
         ]);
       } finally {
         setLoading(false);
@@ -74,7 +74,7 @@ export default function App({ agent, model, contextLimit }: Props) {
         <Text dimColor> ({model}) — /quit to exit</Text>
       </Box>
 
-      <MessageList messages={messages} />
+      <MessageList entries={entries} />
 
       {loading && (
         <Box flexDirection="column">

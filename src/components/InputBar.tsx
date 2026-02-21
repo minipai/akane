@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { Box, Text, useInput } from "ink";
+import { Box, Text, useInput, useStdout } from "ink";
 import TextInput from "ink-text-input";
 
 interface Props {
@@ -14,6 +14,9 @@ export default function InputBar({ onSubmit, disabled, approvalMode, onApproval 
   const historyRef = useRef<string[]>([]);
   const historyIndexRef = useRef(-1);
   const draftRef = useRef("");
+  const { stdout } = useStdout();
+  const width = stdout?.columns ?? 80;
+  const line = "─".repeat(width);
 
   useInput((_input, key) => {
     if (disabled || approvalMode) return;
@@ -57,37 +60,45 @@ export default function InputBar({ onSubmit, disabled, approvalMode, onApproval 
 
   if (approvalMode) {
     return (
-      <Box>
-        <Text color="yellow" bold>
-          {"[y/n] "}{" "}
-        </Text>
-        <TextInput
-          value={value}
-          onChange={setValue}
-          onSubmit={handleApproval}
-          placeholder="y to approve, n to deny"
-          focus={true}
-        />
+      <Box flexDirection="column">
+        <Text dimColor>{line}</Text>
+        <Box>
+          <Text color="yellow" bold>
+            {"[y/n] "}{" "}
+          </Text>
+          <TextInput
+            value={value}
+            onChange={setValue}
+            onSubmit={handleApproval}
+            placeholder="y to approve, n to deny"
+            focus={true}
+          />
+        </Box>
+        <Text dimColor>{line}</Text>
       </Box>
     );
   }
 
   return (
-    <Box>
-      <Text color="green" bold>
-        {">"}{" "}
-      </Text>
-      {disabled ? (
-        <Text dimColor>...</Text>
-      ) : (
-        <TextInput
-          value={value}
-          onChange={setValue}
-          onSubmit={handleSubmit}
-          placeholder="Type a message..."
-          focus={!disabled}
-        />
-      )}
+    <Box flexDirection="column">
+      <Text dimColor>{line}</Text>
+      <Box>
+        <Text color="green" bold>
+          {"❯ "}
+        </Text>
+        {disabled ? (
+          <Text dimColor>...</Text>
+        ) : (
+          <TextInput
+            value={value}
+            onChange={setValue}
+            onSubmit={handleSubmit}
+            placeholder="Type a message..."
+            focus={!disabled}
+          />
+        )}
+      </Box>
+      <Text dimColor>{line}</Text>
     </Box>
   );
 }

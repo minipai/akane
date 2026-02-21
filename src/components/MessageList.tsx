@@ -49,13 +49,13 @@ export default function MessageList({ entries }: Props) {
         return (
           <Box key={i} marginBottom={0}>
             <Box flexShrink={0}>
-              <Text color={isAssistant ? "cyan" : "green"} bold>
-                {isAssistant ? "akane" : "you"}{" "}
+              <Text color={isAssistant ? "#ff77ff" : "green"} bold>
+                {isAssistant ? "Kana" : "you"}{" "}
               </Text>
               {isAssistant && emoji && (
-                <Text color="cyan">{emoji} </Text>
+                <Text color="#ff77ff">{emoji} </Text>
               )}
-              <Text color={isAssistant ? "cyan" : "green"} bold>:{" "}</Text>
+              <Text color={isAssistant ? "#ff77ff" : "green"} bold>:{" "}</Text>
             </Box>
             <Text wrap="wrap">{content}</Text>
           </Box>

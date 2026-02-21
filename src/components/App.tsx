@@ -6,7 +6,12 @@ import ToolPanel from "./ToolPanel.js";
 import InputBar from "./InputBar.js";
 import StatusBar from "./StatusBar.js";
 import type { Agent } from "../agent.js";
-import type { ChatEntry, ToolActivity, ToolApprovalRequest, TokenUsage } from "../types.js";
+import type {
+  ChatEntry,
+  ToolActivity,
+  ToolApprovalRequest,
+  TokenUsage,
+} from "../types.js";
 import { formatToolArgs } from "../tools/index.js";
 
 interface Props {
@@ -20,20 +25,27 @@ export default function App({ agent, model, contextLimit }: Props) {
   const [entries, setEntries] = useState<ChatEntry[]>(agent.getEntries());
   const [loading, setLoading] = useState(false);
   const [toolActivity, setToolActivity] = useState<ToolActivity | null>(null);
-  const [tokenUsage, setTokenUsage] = useState<TokenUsage>({ promptTokens: 0, totalTokens: 0 });
-  const [pendingApproval, setPendingApproval] = useState<ToolApprovalRequest | null>(null);
+  const [tokenUsage, setTokenUsage] = useState<TokenUsage>({
+    promptTokens: 0,
+    totalTokens: 0,
+  });
+  const [pendingApproval, setPendingApproval] =
+    useState<ToolApprovalRequest | null>(null);
 
   useEffect(() => {
     agent.setOnToolActivity(setToolActivity);
     agent.setOnToolApproval(setPendingApproval);
   }, [agent]);
 
-  const handleApproval = useCallback((approved: boolean) => {
-    if (pendingApproval) {
-      pendingApproval.resolve(approved);
-      setPendingApproval(null);
-    }
-  }, [pendingApproval]);
+  const handleApproval = useCallback(
+    (approved: boolean) => {
+      if (pendingApproval) {
+        pendingApproval.resolve(approved);
+        setPendingApproval(null);
+      }
+    },
+    [pendingApproval],
+  );
 
   const handleSubmit = useCallback(
     async (text: string) => {
@@ -42,7 +54,10 @@ export default function App({ agent, model, contextLimit }: Props) {
         return;
       }
 
-      setEntries([...agent.getEntries(), { message: { role: "user", content: text } }]);
+      setEntries([
+        ...agent.getEntries(),
+        { message: { role: "user", content: text } },
+      ]);
       setLoading(true);
       setToolActivity(null);
 
@@ -51,8 +66,7 @@ export default function App({ agent, model, contextLimit }: Props) {
         setEntries([...agent.getEntries()]);
         setTokenUsage(agent.getTokenUsage());
       } catch (err: unknown) {
-        const errMsg =
-          err instanceof Error ? err.message : "Unknown error";
+        const errMsg = err instanceof Error ? err.message : "Unknown error";
         setEntries((prev) => [
           ...prev,
           { message: { role: "assistant", content: `Error: ${errMsg}` } },
@@ -62,14 +76,14 @@ export default function App({ agent, model, contextLimit }: Props) {
         setToolActivity(null);
       }
     },
-    [agent, exit]
+    [agent, exit],
   );
 
   return (
     <Box flexDirection="column" height="100%">
       <Box marginBottom={1}>
-        <Text bold color="magenta">
-          akane
+        <Text bold color="#ff77ff">
+          K.A.N.A ♡⸜(˶˃ ᵕ ˂˶)⸝♡
         </Text>
         <Text dimColor> ({model}) — /quit to exit</Text>
       </Box>
@@ -82,7 +96,9 @@ export default function App({ agent, model, contextLimit }: Props) {
             <Box>
               <Text>Allow {pendingApproval.name} </Text>
               {pendingApproval.args !== "{}" && (
-                <Text color="cyan" bold>{formatToolArgs(pendingApproval.name, pendingApproval.args)}</Text>
+                <Text color="cyan" bold>
+                  {formatToolArgs(pendingApproval.name, pendingApproval.args)}
+                </Text>
               )}
               <Text dimColor> ?</Text>
             </Box>
@@ -94,7 +110,9 @@ export default function App({ agent, model, contextLimit }: Props) {
                   <Spinner type="dots" />{" "}
                 </Text>
                 <Text dimColor>
-                  {toolActivity ? `Running ${toolActivity.name}...` : "Thinking..."}
+                  {toolActivity
+                    ? `Running ${toolActivity.name}...`
+                    : "Thinking..."}
                 </Text>
               </Box>
             </>

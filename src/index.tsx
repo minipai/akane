@@ -9,7 +9,8 @@ import {
   initMemory,
   createConversation,
   endConversation,
-  getRecentSummaries,
+  getRecentConversationSummary,
+  updateRecentConversationSummary,
   getRecentDiaries,
   generateDiary,
 } from "./memory/index.js";
@@ -36,7 +37,7 @@ if (!getKv("next_question")) {
 
 // Build memory context from DB
 const memory: MemoryContext = {
-  todaySummaries: getRecentSummaries(3),
+  recentSummary: getRecentConversationSummary(),
   dailies: getRecentDiaries("daily", 7),
   weeklies: getRecentDiaries("weekly", 3),
   monthlies: getRecentDiaries("monthly", 2),
@@ -93,6 +94,9 @@ async function generateSummary(): Promise<string | undefined> {
 
 async function cleanup() {
   const summary = await generateSummary();
+  if (summary) {
+    await updateRecentConversationSummary(client, model, summary);
+  }
   endConversation(conversationId, summary);
 }
 

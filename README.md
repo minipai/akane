@@ -1,4 +1,4 @@
-# K.A.N.A — Kawaii And Nice Assistant ♡⸜(˶˃ ᵕ ˂˶)⸝♡
+# K.A.N.A. — Kawaii And Nice Assistant ♡⸜(˶˃ ᵕ ˂˶)⸝♡
 
 AI chat agent with a TUI built on Ink (React for CLI).
 

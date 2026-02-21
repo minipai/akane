@@ -24,7 +24,7 @@ function replaceVars(text: string): string {
 }
 
 export interface MemoryContext {
-  todaySummaries: string[];
+  recentSummary: string | null;
   dailies: string[];
   weeklies: string[];
   monthlies: string[];
@@ -73,9 +73,8 @@ export function buildSystemPrompt(memory?: MemoryContext): string {
       raw += `\n\n# Memory\n${sections.join("\n\n")}`;
     }
 
-    if (memory.todaySummaries.length > 0) {
-      const items = memory.todaySummaries.map((s) => `- ${s}`).join("\n");
-      raw += `\n\n# Recent conversations\n${items}`;
+    if (memory.recentSummary) {
+      raw += `\n\n# Earlier today\n${memory.recentSummary}`;
     }
   }
 

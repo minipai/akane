@@ -23,7 +23,7 @@ export default function Banner({ model }: Props) {
   return (
     <Box marginBottom={1}>
       <Text bold color="#ff77ff">
-        K.A.N.A {greeting}
+        K.A.N.A. {greeting}
       </Text>
       <Text dimColor> ({model}) — /quit to exit</Text>
     </Box>

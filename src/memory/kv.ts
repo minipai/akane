@@ -12,6 +12,16 @@ export function getKv(key: string): string | null {
   return row?.value ?? null;
 }
 
+export function getKvUpdatedAt(key: string): string | null {
+  const db = getDb();
+  const row = db
+    .select({ updatedAt: kvStore.updatedAt })
+    .from(kvStore)
+    .where(eq(kvStore.key, key))
+    .get();
+  return row?.updatedAt ?? null;
+}
+
 export function setKv(key: string, value: string): void {
   const db = getDb();
   const now = new Date().toISOString();

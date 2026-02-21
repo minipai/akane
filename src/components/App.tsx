@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Box, Text, useApp } from "ink";
 import Spinner from "ink-spinner";
+import Banner from "./Banner.js";
 import MessageList from "./MessageList.js";
 import ToolPanel from "./ToolPanel.js";
 import InputBar from "./InputBar.js";
@@ -81,12 +82,7 @@ export default function App({ agent, model, contextLimit }: Props) {
 
   return (
     <Box flexDirection="column" height="100%">
-      <Box marginBottom={1}>
-        <Text bold color="#ff77ff">
-          K.A.N.A ♡⸜(˶˃ ᵕ ˂˶)⸝♡
-        </Text>
-        <Text dimColor> ({model}) — /quit to exit</Text>
-      </Box>
+      <Banner model={model} />
 
       <MessageList entries={entries} />
 

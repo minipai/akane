@@ -69,3 +69,6 @@ export function getTodaySummaries(): string[] {
     .all();
   return rows.map((r) => r.summary!);
 }
+
+export { getRecentDiaries } from "./diary.js";
+export { generateDiary } from "./diary.js";

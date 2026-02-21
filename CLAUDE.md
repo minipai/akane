@@ -39,9 +39,10 @@ src/
 │   ├── shell.ts       # Shell command execution tool
 │   └── emotion.ts     # Emotion tool (set_emotion) — auto-approved, no user confirmation
 ├── memory/
-│   ├── schema.ts      # Drizzle schema — conversations and messages tables
+│   ├── schema.ts      # Drizzle schema — conversations, messages, and diary tables
 │   ├── db.ts          # SQLite connection (better-sqlite3 + drizzle), stored at ~/.kana/memory.db
-│   └── index.ts       # Memory API — create/end conversations, save messages, get summaries
+│   ├── index.ts       # Memory API — create/end conversations, save messages, get summaries
+│   └── diary.ts       # Diary system — hierarchical summaries (daily→weekly→monthly→quarterly→yearly)
 └── prompts/
     ├── index.ts       # Builds system prompt from markdown files
     ├── IDENTITY.md    # Character identity/personality (user-specific, not committed)
@@ -59,6 +60,7 @@ src/
 - **Colors**: Use hex colors like `#ff77ff` instead of ANSI names (e.g. `"magenta"`) — some terminals remap ANSI colors
 - **Prompt files**: `IDENTITY.md` and `USER.md` contain personal info and are blank in git history. Do not commit real content.
 - **Memory system**: SQLite DB at `memory.db` (project root, gitignored) persists conversations and messages. On startup, recent conversation summaries are injected into the system prompt. On exit, an LLM-generated summary is saved for future context.
+- **Diary system**: Hierarchical memory compression chain — conversation summaries → daily → weekly → monthly → quarterly → yearly. Generated lazily on startup when a previous period is complete (fire-and-forget, non-blocking). Injected into system prompt as `# Memory` with subsections by granularity. Schema: `diary` table with composite PK `(type, date)`.
 
 ## Adding a New Tool
 

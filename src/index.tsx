@@ -4,22 +4,38 @@ import config from "./config.js";
 import { createClient } from "./client.js";
 import { Agent } from "./agent.js";
 import { buildSystemPrompt } from "./prompts/index.js";
+import type { MemoryContext } from "./prompts/index.js";
 import {
   initMemory,
   createConversation,
   endConversation,
   getTodaySummaries,
+  getRecentDiaries,
+  generateDiary,
 } from "./memory/index.js";
 import App from "./components/App.js";
 
 // Initialize memory and load previous summaries
 initMemory();
-const summaries = getTodaySummaries();
+
+const { client, model } = createClient(config);
+
+// Fire-and-forget diary generation (don't block startup)
+generateDiary(client, model);
+
+// Build memory context from DB
+const memory: MemoryContext = {
+  todaySummaries: getTodaySummaries(),
+  dailies: getRecentDiaries("daily", 7),
+  weeklies: getRecentDiaries("weekly", 3),
+  monthlies: getRecentDiaries("monthly", 2),
+  quarterlies: getRecentDiaries("quarterly", 3),
+  yearlies: getRecentDiaries("yearly", 3),
+};
 
 const conversationId = createConversation();
 
-const { client, model } = createClient(config);
-const systemPrompt = buildSystemPrompt(summaries);
+const systemPrompt = buildSystemPrompt(memory);
 const agent = new Agent(client, model, systemPrompt);
 agent.setConversationId(conversationId);
 

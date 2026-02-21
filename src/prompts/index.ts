@@ -23,16 +23,49 @@ function replaceVars(text: string): string {
   return result;
 }
 
-export function buildSystemPrompt(summaries?: string[]): string {
+export interface MemoryContext {
+  todaySummaries: string[];
+  dailies: string[];
+  weeklies: string[];
+  monthlies: string[];
+  quarterlies: string[];
+  yearlies: string[];
+}
+
+export function buildSystemPrompt(memory?: MemoryContext): string {
   const identity = readPromptFile("IDENTITY.md");
   const agent = readPromptFile("AGENT.md");
   const user = readPromptFile("USER.md");
 
   let raw = `# Identity\n${identity}\n\n# Agent\n${agent}\n\n# User\n${user}`;
 
-  if (summaries && summaries.length > 0) {
-    const items = summaries.map((s) => `- ${s}`).join("\n");
-    raw += `\n\n# Earlier today\nHere's what we talked about earlier:\n${items}`;
+  const sections: string[] = [];
+
+  if (memory) {
+    if (memory.yearlies.length > 0) {
+      sections.push(`## Recent years\n${memory.yearlies.map((s) => `- ${s}`).join("\n")}`);
+    }
+    if (memory.quarterlies.length > 0) {
+      sections.push(`## Recent quarters\n${memory.quarterlies.map((s) => `- ${s}`).join("\n")}`);
+    }
+    if (memory.monthlies.length > 0) {
+      sections.push(`## Recent months\n${memory.monthlies.map((s) => `- ${s}`).join("\n")}`);
+    }
+    if (memory.weeklies.length > 0) {
+      sections.push(`## Recent weeks\n${memory.weeklies.map((s) => `- ${s}`).join("\n")}`);
+    }
+    if (memory.dailies.length > 0) {
+      sections.push(`## Recent days\n${memory.dailies.map((s) => `- ${s}`).join("\n")}`);
+    }
+
+    if (sections.length > 0) {
+      raw += `\n\n# Memory\n${sections.join("\n\n")}`;
+    }
+
+    if (memory.todaySummaries.length > 0) {
+      const items = memory.todaySummaries.map((s) => `- ${s}`).join("\n");
+      raw += `\n\n# Earlier today\nHere's what we talked about earlier:\n${items}`;
+    }
   }
 
   return replaceVars(raw);

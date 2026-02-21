@@ -5,6 +5,7 @@ import type {
 } from "openai/resources/chat/completions";
 import type { Message, ChatEntry, ToolActivity, ToolApprovalRequest, TokenUsage } from "./types.js";
 import { tools, executeTool, autoApprovedTools } from "./tools/index.js";
+import { saveMessage } from "./memory/index.js";
 
 const MAX_ITERATIONS = 10;
 
@@ -22,12 +23,17 @@ export class Agent {
   private onToolApproval?: OnToolApproval;
   private onEmotionChange?: OnEmotionChange;
   private lastUsage: TokenUsage = { promptTokens: 0, totalTokens: 0 };
+  private conversationId: string | null = null;
 
   constructor(client: OpenAI, model: string, systemPrompt: string) {
     this.client = client;
     this.model = model;
     this.messages = [{ role: "system", content: systemPrompt }];
     this.entries = [{ message: this.messages[0] }];
+  }
+
+  setConversationId(id: string): void {
+    this.conversationId = id;
   }
 
   setOnToolActivity(cb: OnToolActivity): void {
@@ -92,6 +98,12 @@ export class Agent {
       entry.emotion = this.currentEmotion;
     }
     this.entries.push(entry);
+
+    if (this.conversationId) {
+      try {
+        saveMessage(this.conversationId, entry);
+      } catch {}
+    }
   }
 
   private async callLLM(): Promise<ChatCompletionMessage | null> {

@@ -22,7 +22,7 @@ These replace `{{…}}` placeholders in the prompt markdown files at runtime.
 
 ```
 src/
-├── index.tsx          # Entry point — creates client, agent, renders App
+├── index.tsx          # Entry point — creates client, agent, memory lifecycle, renders App
 ├── config.ts          # Environment config (API key, model, context limit)
 ├── client.ts          # OpenAI client factory
 ├── agent.ts           # Agent class — manages conversation loop, tool execution, emotions
@@ -38,6 +38,10 @@ src/
 │   ├── index.ts       # Tool registry, dispatcher, formatToolArgs
 │   ├── shell.ts       # Shell command execution tool
 │   └── emotion.ts     # Emotion tool (set_emotion) — auto-approved, no user confirmation
+├── memory/
+│   ├── schema.ts      # Drizzle schema — conversations and messages tables
+│   ├── db.ts          # SQLite connection (better-sqlite3 + drizzle), stored at ~/.kana/memory.db
+│   └── index.ts       # Memory API — create/end conversations, save messages, get summaries
 └── prompts/
     ├── index.ts       # Builds system prompt from markdown files
     ├── IDENTITY.md    # Character identity/personality (user-specific, not committed)
@@ -54,6 +58,7 @@ src/
 - **Emotion system**: `set_emotion` tool lets the LLM express emotions, displayed as kaomoji next to messages
 - **Colors**: Use hex colors like `#ff77ff` instead of ANSI names (e.g. `"magenta"`) — some terminals remap ANSI colors
 - **Prompt files**: `IDENTITY.md` and `USER.md` contain personal info and are blank in git history. Do not commit real content.
+- **Memory system**: SQLite DB at `memory.db` (project root, gitignored) persists conversations and messages. On startup, recent conversation summaries are injected into the system prompt. On exit, an LLM-generated summary is saved for future context.
 
 ## Adding a New Tool
 

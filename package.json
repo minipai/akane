@@ -4,14 +4,19 @@
   "description": "AI chat agent with TUI",
   "type": "module",
   "scripts": {
-    "dev": "tsx src/index.tsx"
+    "dev": "tsx src/index.tsx",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@types/react": "^19.2.14",
+    "better-sqlite3": "^12.6.2",
     "dotenv": "^17.3.1",
+    "drizzle-orm": "^0.45.1",
     "ink": "^6.8.0",
     "ink-spinner": "^5.0.0",
     "ink-text-input": "^6.0.0",
@@ -21,6 +26,8 @@
     "typescript": "^5.9.3"
   },
   "devDependencies": {
-    "@types/node": "^25.3.0"
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^25.3.0",
+    "drizzle-kit": "^0.31.9"
   }
 }

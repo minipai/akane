@@ -23,11 +23,17 @@ function replaceVars(text: string): string {
   return result;
 }
 
-export function buildSystemPrompt(): string {
+export function buildSystemPrompt(summaries?: string[]): string {
   const identity = readPromptFile("IDENTITY.md");
   const agent = readPromptFile("AGENT.md");
   const user = readPromptFile("USER.md");
 
-  const raw = `# Identity\n${identity}\n\n# Agent\n${agent}\n\n# User\n${user}`;
+  let raw = `# Identity\n${identity}\n\n# Agent\n${agent}\n\n# User\n${user}`;
+
+  if (summaries && summaries.length > 0) {
+    const items = summaries.map((s) => `- ${s}`).join("\n");
+    raw += `\n\n# Earlier today\nHere's what we talked about earlier:\n${items}`;
+  }
+
   return replaceVars(raw);
 }

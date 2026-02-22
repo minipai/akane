@@ -17,6 +17,7 @@ import {
 import { getAllProfiles, generateNextQuestion } from "./memory/user-facts.js";
 import { setUserFactsContext } from "./tools/index.js";
 import { getKv } from "./memory/kv.js";
+import { MP_DISPLAY_MAX } from "./components/StatusBar.js";
 import App from "./components/App.js";
 
 // Initialize memory and load previous summaries
@@ -51,6 +52,7 @@ const conversationId = createConversation();
 const systemPrompt = buildSystemPrompt(memory);
 const agent = new Agent(client, model, systemPrompt);
 agent.setConversationId(conversationId);
+agent.setMpMax(MP_DISPLAY_MAX);
 
 async function generateSummary(): Promise<string | undefined> {
   const entries = agent.getEntries();

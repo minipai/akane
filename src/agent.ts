@@ -26,6 +26,7 @@ export class Agent {
   private onEmotionChange?: OnEmotionChange;
   private lastUsage: TokenUsage = { promptTokens: 0, totalTokens: 0 };
   private conversationId: string | null = null;
+  private mpMax: number = 100_000;
 
   constructor(client: OpenAI, model: string, systemPrompt: string) {
     this.client = client;
@@ -36,6 +37,15 @@ export class Agent {
 
   setConversationId(id: string): void {
     this.conversationId = id;
+  }
+
+  setMpMax(max: number): void {
+    this.mpMax = max;
+  }
+
+  private getMpRatio(): number {
+    const remaining = Math.max(0, this.mpMax - this.lastUsage.totalTokens);
+    return remaining / this.mpMax;
   }
 
   setOnToolActivity(cb: OnToolActivity): void {
@@ -123,9 +133,30 @@ export class Agent {
   }
 
   private async callLLM(): Promise<ChatCompletionMessage | null> {
+    const mpRatio = this.getMpRatio();
+    const messages = [...this.messages];
+
+    const pct = Math.round(mpRatio * 100);
+    let mpHint: string;
+    switch (true) {
+      case mpRatio < 0.2:
+        mpHint = `Your MP is at ${pct}%. You're nearly drained — express exhaustion naturally. Keep replies very short.`;
+        break;
+      case mpRatio < 0.5:
+        mpHint = `Your MP is at ${pct}%. You're getting a bit tired — subtly show it in your tone. Be slightly more concise.`;
+        break;
+      default:
+        mpHint = `Your MP is at ${pct}%. You're feeling fine.`;
+        break;
+    }
+    messages.push({
+      role: "developer",
+      content: `[System: ${mpHint}]`,
+    } as any);
+
     const response = await this.client.chat.completions.create({
       model: this.model,
-      messages: this.messages,
+      messages,
       tools,
     });
 

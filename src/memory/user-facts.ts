@@ -2,16 +2,19 @@ import { eq } from "drizzle-orm";
 import { getDb } from "../db/db.js";
 import { userFacts, userProfile } from "../db/schema.js";
 
-export const CATEGORIES = [
-  "identity",    // name, location, language, nationality, timezone, demographics
-  "relations",   // family, partner, kids, close friends, pets
-  "career",      // job, industry, skills, tech stack, professional goals
-  "preferences", // food, colors, aesthetics, hobbies, daily habits, lifestyle
-  "mindset",     // personality traits, beliefs, ethics, worldview, interaction style
-  "timeline",    // life milestones, goals, commitments, open loops, plans
+const CATEGORY_DEFS = [
+  { category: "identity",    label: "Identity & Background",    subtopics: ["name", "location", "language", "nationality", "timezone", "demographics"] },
+  { category: "relations",   label: "Relationships",            subtopics: ["family", "partner", "kids", "close friends", "pets"] },
+  { category: "career",      label: "Career & Skills",          subtopics: ["job", "industry", "skills", "tech stack", "professional goals"] },
+  { category: "preferences", label: "Preferences & Lifestyle",  subtopics: ["food", "colors", "aesthetics", "hobbies", "daily habits", "lifestyle"] },
+  { category: "mindset",     label: "Personality & Mindset",    subtopics: ["personality traits", "beliefs", "ethics", "worldview", "interaction style"] },
+  { category: "timeline",    label: "Timeline & Plans",         subtopics: ["life milestones", "goals", "commitments", "open loops", "plans"] },
 ] as const;
 
-export type Category = (typeof CATEGORIES)[number];
+export const CATEGORIES = CATEGORY_DEFS.map((d) => d.category);
+export type Category = (typeof CATEGORY_DEFS)[number]["category"];
+export const CATEGORY_LABELS = Object.fromEntries(CATEGORY_DEFS.map((d) => [d.category, d.label])) as Record<Category, string>;
+export const SUBTOPICS = Object.fromEntries(CATEGORY_DEFS.map((d) => [d.category, d.subtopics as unknown as string[]])) as Record<Category, string[]>;
 
 export function insertFact(category: Category, fact: string): number {
   const db = getDb();
@@ -92,20 +95,3 @@ export function getAllProfiles(): Record<string, string> {
   return result;
 }
 
-export const CATEGORY_LABELS: Record<Category, string> = {
-  identity: "Identity & Background",
-  relations: "Relationships",
-  career: "Career & Skills",
-  preferences: "Preferences & Lifestyle",
-  mindset: "Personality & Mindset",
-  timeline: "Timeline & Plans",
-};
-
-export const SUBTOPICS: Record<Category, string[]> = {
-  identity: ["where they grew up", "what languages they speak", "their nationality", "their timezone or city"],
-  relations: ["their family", "whether they have pets", "their closest friends", "their partner or dating life"],
-  career: ["what they do for work", "what programming languages they use", "their tech stack", "their career goals"],
-  preferences: ["their favorite food", "their hobbies", "what music they listen to", "their morning routine"],
-  mindset: ["what motivates them", "their personal philosophy", "how they handle stress", "what they value most"],
-  timeline: ["what they're working on lately", "their plans for the weekend", "a recent life milestone", "their goals for this year"],
-};

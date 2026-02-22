@@ -6,17 +6,19 @@ import MessageList from "./MessageList.js";
 import ToolPanel from "./ToolPanel.js";
 import InputBar from "./InputBar.js";
 import StatusBar from "./StatusBar.js";
-import type { Agent } from "../core/agent.js";
-import type { ChatEntry, ToolActivity, ToolApprovalRequest } from "../core/agent.js";
-import { formatToolArgs } from "../core/agent.js";
+import type { Agent } from "../agent/agent.js";
+import type { ChatEntry, ToolActivity, ToolApprovalRequest } from "../agent/agent.js";
+import { formatToolArgs } from "../agent/agent.js";
+import type { Dispatch } from "../boot/dispatch.js";
 
 interface Props {
   agent: Agent;
+  dispatch: Dispatch;
   model: string;
   displayFromIndex: number;
 }
 
-export default function App({ agent, model, displayFromIndex }: Props) {
+export default function App({ agent, dispatch, model, displayFromIndex }: Props) {
   const { exit } = useApp();
   const [entries, setEntries] = useState<ChatEntry[]>(agent.getEntries());
   const displayFrom = useRef(displayFromIndex);
@@ -30,24 +32,24 @@ export default function App({ agent, model, displayFromIndex }: Props) {
     agent.setOnToolApproval(setPendingApproval);
     agent.vitals.startHpRefresh();
 
-    const r = agent.receptionist;
-    r.on("quit", () => exit());
-    r.on("rest:before", () => {
+    const ev = dispatch.events;
+    ev.on("quit", () => exit());
+    ev.on("rest:before", () => {
       displayFrom.current = 0;
       setEntries([{ message: { role: "assistant", content: "(｡-ω-)zzZ Resting..." }, emotion: "neutral" }]);
     });
-    r.on("rest:after", () => setEntries([...agent.getEntries()]));
-    r.on("chat:before", (text) => {
+    ev.on("rest:after", () => setEntries([...agent.getEntries()]));
+    ev.on("chat:before", (text) => {
       setEntries([...agent.getEntries(), { message: { role: "user", content: text } }]);
       setLoading(true);
       setToolActivity(null);
     });
-    r.on("chat:after", () => {
+    ev.on("chat:after", () => {
       setEntries([...agent.getEntries()]);
       setLoading(false);
       setToolActivity(null);
     });
-    r.on("chat:error", (errMsg) => {
+    ev.on("chat:error", (errMsg) => {
       setEntries((prev) => [
         ...prev,
         { message: { role: "assistant", content: `Error: ${errMsg}` } },
@@ -57,10 +59,10 @@ export default function App({ agent, model, displayFromIndex }: Props) {
     });
 
     return () => {
-      r.removeAllListeners();
+      ev.removeAllListeners();
       agent.vitals.stopHpRefresh();
     };
-  }, [agent, exit]);
+  }, [agent, dispatch, exit]);
 
   const handleApproval = useCallback(
     (approved: boolean) => {
@@ -73,8 +75,8 @@ export default function App({ agent, model, displayFromIndex }: Props) {
   );
 
   const handleSubmit = useCallback(
-    (text: string) => { agent.receptionist.handle(text); },
-    [agent],
+    (text: string) => { dispatch.handle(text); },
+    [dispatch],
   );
 
   return (
@@ -121,7 +123,7 @@ export default function App({ agent, model, displayFromIndex }: Props) {
           onApproval={handleApproval}
         />
       ) : (
-        <InputBar onSubmit={handleSubmit} disabled={loading} commands={agent.receptionist.commands} />
+        <InputBar onSubmit={handleSubmit} disabled={loading} commands={dispatch.commands} />
       )}
       <StatusBar vitals={agent.vitals} model={model} />
     </Box>

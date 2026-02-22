@@ -1,8 +1,6 @@
 import { eq } from "drizzle-orm";
-import type { ChatClient } from "../types.js";
 import { getDb } from "./db.js";
 import { userFacts, userProfile } from "./schema.js";
-import { getKv, setKv } from "./kv.js";
 
 export const CATEGORIES = [
   "identity",    // name, location, language, nationality, timezone, demographics
@@ -103,41 +101,7 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   timeline: "Timeline & Plans",
 };
 
-export async function regenerateProfile(
-  client: ChatClient,
-  model: string,
-  category: Category,
-): Promise<void> {
-  const facts = getFactsByCategory(category);
-  if (facts.length === 0) {
-    // No facts left — remove profile
-    const db = getDb();
-    db.delete(userProfile).where(eq(userProfile.category, category)).run();
-    return;
-  }
-
-  const factList = facts.map((f) => `- ${f.fact}`).join("\n");
-  const response = await client.chat.completions.create({
-    model,
-    messages: [
-      {
-        role: "system",
-        content:
-          `Summarize the following facts about a user into a concise profile paragraph (2-4 sentences). ` +
-          `Category: ${CATEGORY_LABELS[category]}. Write in third person. ` +
-          `Reply with ONLY the summary, nothing else.`,
-      },
-      { role: "user", content: factList },
-    ],
-  });
-
-  const summary = response.choices[0]?.message?.content?.trim();
-  if (summary) {
-    upsertProfile(category, summary);
-  }
-}
-
-const SUBTOPICS: Record<Category, string[]> = {
+export const SUBTOPICS: Record<Category, string[]> = {
   identity: ["where they grew up", "what languages they speak", "their nationality", "their timezone or city"],
   relations: ["their family", "whether they have pets", "their closest friends", "their partner or dating life"],
   career: ["what they do for work", "what programming languages they use", "their tech stack", "their career goals"],
@@ -145,35 +109,3 @@ const SUBTOPICS: Record<Category, string[]> = {
   mindset: ["what motivates them", "their personal philosophy", "how they handle stress", "what they value most"],
   timeline: ["what they're working on lately", "their plans for the weekend", "a recent life milestone", "their goals for this year"],
 };
-
-export async function generateNextQuestion(
-  client: ChatClient,
-  model: string,
-): Promise<void> {
-  // Pick a random category and subtopic
-  const category = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
-  const subs = SUBTOPICS[category];
-  const topic = subs[Math.floor(Math.random() * subs.length)];
-
-  const profiles = getAllProfiles();
-  const known = profiles[category];
-
-  let prompt =
-    `Write a short, casual question asking someone about ${topic}.\n` +
-    `The question must ask about a concrete fact, not feelings or hypotheticals.\n` +
-    `Reply with ONLY the question, nothing else. No quotes. One sentence.`;
-
-  if (known) {
-    prompt += `\n\nWe already know this about them:\n${known}\nAsk about something NOT covered above.`;
-  }
-
-  const response = await client.chat.completions.create({
-    model,
-    messages: [{ role: "user", content: prompt }],
-  });
-
-  const question = response.choices[0]?.message?.content?.trim();
-  if (question) {
-    setKv("next_question", `[${category}] ${question}`);
-  }
-}

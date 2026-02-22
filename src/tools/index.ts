@@ -1,4 +1,6 @@
 import type { ChatCompletionTool } from "openai/resources/chat/completions";
+import type { Memory } from "../memory/memory.js";
+import type { Compressor } from "../types.js";
 import { shellToolDef, executeShell } from "./shell.js";
 import { emotionToolDef, executeEmotion } from "./emotion.js";
 import {
@@ -10,7 +12,10 @@ import {
   executeUpdateUserFact,
 } from "./user-facts.js";
 
-export { setUserFactsContext } from "./user-facts.js";
+export interface ToolContext {
+  memory: Memory;
+  compress: Compressor;
+}
 
 export const tools: ChatCompletionTool[] = [
   shellToolDef,
@@ -53,7 +58,8 @@ export function formatToolArgs(name: string, argsJson: string): string {
 
 export async function executeTool(
   name: string,
-  args: string
+  args: string,
+  ctx: ToolContext,
 ): Promise<string> {
   const parsed = JSON.parse(args);
 
@@ -63,11 +69,11 @@ export async function executeTool(
     case "set_emotion":
       return executeEmotion(parsed.emotion);
     case "note_about_user":
-      return executeNoteAboutUser(parsed.category, parsed.fact);
+      return executeNoteAboutUser(parsed.category, parsed.fact, ctx);
     case "get_user_facts":
-      return executeGetUserFacts(parsed.category);
+      return executeGetUserFacts(parsed.category, ctx);
     case "update_user_fact":
-      return executeUpdateUserFact(parsed.id, parsed.fact, parsed.delete);
+      return executeUpdateUserFact(parsed.id, parsed.fact, parsed.delete, ctx);
     default:
       return `Unknown tool: ${name}`;
   }

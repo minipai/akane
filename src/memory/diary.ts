@@ -1,30 +1,16 @@
-import type { ChatClient } from "../types.js";
+import type { Compressor } from "../types.js";
 import { and, eq, gte, lt, desc, isNotNull } from "drizzle-orm";
 import { getDb } from "./db.js";
 import { diary, conversations } from "./schema.js";
 
-type DiaryType = "daily" | "weekly" | "monthly" | "quarterly" | "yearly";
+export type DiaryType = "daily" | "weekly" | "monthly" | "quarterly" | "yearly";
 
-async function summarizeTexts(
-  client: ChatClient,
-  model: string,
+async function compressTexts(
+  compress: Compressor,
   texts: string[],
   instruction: string,
 ): Promise<string> {
-  const response = await client.chat.completions.create({
-    model,
-    messages: [
-      {
-        role: "system",
-        content: instruction,
-      },
-      {
-        role: "user",
-        content: texts.map((t) => `- ${t}`).join("\n"),
-      },
-    ],
-  });
-  return response.choices[0]?.message?.content ?? "";
+  return compress(instruction, texts.map((t) => `- ${t}`).join("\n"));
 }
 
 function diaryExists(type: DiaryType, date: string): boolean {
@@ -152,7 +138,7 @@ function weeksInMonth(monthStr: string): string[] {
 
 // --- Generation per level ---
 
-async function generateDaily(client: ChatClient, model: string): Promise<void> {
+async function generateDaily(compress: Compressor): Promise<void> {
   const date = yesterday();
 
   if (diaryExists("daily", date)) return;
@@ -178,16 +164,15 @@ async function generateDaily(client: ChatClient, model: string): Promise<void> {
   const summaries = rows.map((r) => r.summary!).filter(Boolean);
   if (summaries.length === 0) return;
 
-  const text = await summarizeTexts(
-    client,
-    model,
+  const text = await compressTexts(
+    compress,
     summaries,
     "Summarize these conversation summaries from a single day into a concise diary entry (2-3 sentences). Capture the key topics, decisions, and emotional tone. Reply with ONLY the summary.",
   );
   if (text) insertDiary("daily", date, text);
 }
 
-async function generateWeekly(client: ChatClient, model: string): Promise<void> {
+async function generateWeekly(compress: Compressor): Promise<void> {
   const week = lastISOWeek();
   if (diaryExists("weekly", week)) return;
 
@@ -195,16 +180,15 @@ async function generateWeekly(client: ChatClient, model: string): Promise<void> 
   const dailies = getDiaries("daily", dates);
   if (dailies.length === 0) return;
 
-  const text = await summarizeTexts(
-    client,
-    model,
+  const text = await compressTexts(
+    compress,
     dailies,
     "Summarize these daily diary entries from one week into a concise weekly summary (2-4 sentences). Highlight recurring themes, progress, and mood. Reply with ONLY the summary.",
   );
   if (text) insertDiary("weekly", week, text);
 }
 
-async function generateMonthly(client: ChatClient, model: string): Promise<void> {
+async function generateMonthly(compress: Compressor): Promise<void> {
   const month = lastMonth();
   if (diaryExists("monthly", month)) return;
 
@@ -212,41 +196,38 @@ async function generateMonthly(client: ChatClient, model: string): Promise<void>
   const weeklies = getDiaries("weekly", weeks);
   if (weeklies.length === 0) return;
 
-  const text = await summarizeTexts(
-    client,
-    model,
+  const text = await compressTexts(
+    compress,
     weeklies,
     "Summarize these weekly diary entries from one month into a concise monthly summary (3-4 sentences). Focus on major developments, evolving topics, and overall trajectory. Reply with ONLY the summary.",
   );
   if (text) insertDiary("monthly", month, text);
 }
 
-async function generateQuarterly(client: ChatClient, model: string): Promise<void> {
+async function generateQuarterly(compress: Compressor): Promise<void> {
   const { key, months } = lastQuarter();
   if (diaryExists("quarterly", key)) return;
 
   const monthlies = getDiaries("monthly", months);
   if (monthlies.length < 3) return;
 
-  const text = await summarizeTexts(
-    client,
-    model,
+  const text = await compressTexts(
+    compress,
     monthlies,
     "Summarize these monthly diary entries from one quarter into a concise quarterly summary (3-5 sentences). Capture the arc of the quarter — themes, growth, and significant events. Reply with ONLY the summary.",
   );
   if (text) insertDiary("quarterly", key, text);
 }
 
-async function generateYearly(client: ChatClient, model: string): Promise<void> {
+async function generateYearly(compress: Compressor): Promise<void> {
   const { key, quarters } = lastYear();
   if (diaryExists("yearly", key)) return;
 
   const quarterlies = getDiaries("quarterly", quarters);
   if (quarterlies.length < 4) return;
 
-  const text = await summarizeTexts(
-    client,
-    model,
+  const text = await compressTexts(
+    compress,
     quarterlies,
     "Summarize these quarterly diary entries from one year into a concise yearly summary (4-6 sentences). Paint a big-picture view of the year — major milestones, relationship evolution, and growth. Reply with ONLY the summary.",
   );
@@ -255,15 +236,14 @@ async function generateYearly(client: ChatClient, model: string): Promise<void> 
 
 /** Run the full diary generation chain. Safe to fire-and-forget. */
 export async function generateDiary(
-  client: ChatClient,
-  model: string,
+  compress: Compressor,
 ): Promise<void> {
   try {
-    await generateDaily(client, model);
-    await generateWeekly(client, model);
-    await generateMonthly(client, model);
-    await generateQuarterly(client, model);
-    await generateYearly(client, model);
+    await generateDaily(compress);
+    await generateWeekly(compress);
+    await generateMonthly(compress);
+    await generateQuarterly(compress);
+    await generateYearly(compress);
   } catch {
     // Diary generation is best-effort — don't crash the app
   }

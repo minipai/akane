@@ -1,17 +1,22 @@
-import { getDailySpend, getCachedDailyCost } from "../memory/costs.js";
-import { getKv, setKv } from "../memory/kv.js";
+import type { Memory } from "../memory/memory.js";
 
 const MP_MAX = 100_000;
 export const HP_DAILY_BUDGET = 1; // USD
 
 export class Vitals {
   private totalTokens: number = 0;
-  private dailyCost: number = getCachedDailyCost();
+  private dailyCost: number;
   private refreshTimer?: ReturnType<typeof setInterval>;
+  private memory: Memory;
+
+  constructor(memory: Memory) {
+    this.memory = memory;
+    this.dailyCost = memory.getCachedDailyCost();
+  }
 
   addTokens(tokens: number): void {
     this.totalTokens += tokens;
-    setKv("usage_total_tokens", String(this.totalTokens));
+    this.memory.setKv("usage_total_tokens", String(this.totalTokens));
   }
 
   getTotalTokens(): number {
@@ -23,7 +28,7 @@ export class Vitals {
   }
 
   restoreFromCache(): void {
-    const cached = getKv("usage_total_tokens");
+    const cached = this.memory.getKv("usage_total_tokens");
     if (cached) this.totalTokens = parseInt(cached, 10) || 0;
   }
 
@@ -54,7 +59,7 @@ export class Vitals {
   }
 
   private refresh(): void {
-    getDailySpend()
+    this.memory.getDailySpend()
       .then((cost) => {
         this.dailyCost = cost;
       })

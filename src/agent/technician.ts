@@ -1,5 +1,6 @@
 import type { ToolActivity, ToolApprovalRequest } from "../types.js";
 import { executeTool, autoApprovedTools } from "../tools/index.js";
+import type { ToolContext } from "../tools/index.js";
 
 export type OnToolActivity = (activity: ToolActivity) => void;
 export type OnToolApproval = (request: ToolApprovalRequest) => void;
@@ -14,6 +15,11 @@ export class Technician {
   private onActivity?: OnToolActivity;
   private onApproval?: OnToolApproval;
   private onEmotionChange?: OnEmotionChange;
+  private ctx: ToolContext;
+
+  constructor(memory: ToolContext["memory"], compress: ToolContext["compress"]) {
+    this.ctx = { memory, compress };
+  }
 
   setOnActivity(cb: OnToolActivity): void {
     this.onActivity = cb;
@@ -61,7 +67,7 @@ export class Technician {
         }
       }
 
-      const result = await executeTool(tc.function.name, tc.function.arguments);
+      const result = await executeTool(tc.function.name, tc.function.arguments, this.ctx);
 
       if (tc.function.name === "set_emotion") {
         try {

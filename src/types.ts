@@ -1,15 +1,22 @@
-import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
-
-/** Minimal interface for the OpenAI chat client — easy to mock in tests. */
-export interface ChatClient {
-  chat: {
-    completions: {
-      create(params: any): Promise<any>;
-    };
-  };
-}
+import type { ChatCompletionMessageParam, ChatCompletionTool, ChatCompletionMessage } from "openai/resources/chat/completions";
 
 export type Message = ChatCompletionMessageParam;
+
+/** Abstract chat client — hides provider-specific details (OpenAI, etc.). */
+export interface ChatClient {
+  chat(params: {
+    messages: Message[];
+    tools?: ChatCompletionTool[];
+  }): Promise<{
+    message: ChatCompletionMessage | null;
+    totalTokens?: number;
+  }>;
+
+  compress(system: string, user: string): Promise<string>;
+}
+
+/** Convenience alias for the compress callback signature. */
+export type Compressor = ChatClient["compress"];
 
 export interface ChatEntry {
   message: Message;

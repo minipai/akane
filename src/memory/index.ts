@@ -4,7 +4,6 @@ import { getDb } from "./db.js";
 import { conversations, messages } from "./schema.js";
 import { getKv, getKvUpdatedAt, setKv } from "./kv.js";
 import type { ChatEntry, Message } from "../types.js";
-import type { ChatClient } from "../types.js";
 
 export function initMemory(): void {
   getDb(); // ensures DB + tables exist
@@ -107,40 +106,8 @@ export function getRecentConversationSummary(): string | null {
   return getKv("recent_conversation_summary");
 }
 
-export async function updateRecentConversationSummary(
-  client: ChatClient,
-  model: string,
-  newSummary: string,
-): Promise<void> {
-  const updatedAt = getKvUpdatedAt("recent_conversation_summary");
-  const existing = updatedAt && isWithin24Hours(updatedAt) ? getKv("recent_conversation_summary") : null;
-
-  if (existing) {
-    try {
-      const response = await client.chat.completions.create({
-        model,
-        messages: [
-          {
-            role: "system",
-            content:
-              "Merge these two summaries of recent conversations into one concise paragraph (2-4 sentences). Keep all key facts, drop redundancy. Reply with ONLY the merged summary.",
-          },
-          {
-            role: "user",
-            content: `Existing:\n${existing}\n\nNew:\n${newSummary}`,
-          },
-        ],
-      });
-      const merged = response.choices[0]?.message?.content;
-      if (merged) {
-        setKv("recent_conversation_summary", merged);
-      }
-    } catch {
-      setKv("recent_conversation_summary", `${existing} ${newSummary}`);
-    }
-  } else {
-    setKv("recent_conversation_summary", newSummary);
-  }
+export function setRecentConversationSummary(summary: string): void {
+  setKv("recent_conversation_summary", summary);
 }
 
 export { getRecentDiaries } from "./diary.js";

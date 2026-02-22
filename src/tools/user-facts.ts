@@ -1,16 +1,13 @@
 import type { ChatCompletionTool } from "openai/resources/chat/completions";
-import type { ChatClient } from "../types.js";
+import type { Memory } from "../memory/memory.js";
+import type { Compressor } from "../types.js";
 import {
   CATEGORIES,
-  insertFact,
-  getFactsByCategory,
-  getCategoryForFact,
-  updateFact,
-  deleteFact,
-  regenerateProfile,
-  generateNextQuestion,
+  CATEGORY_LABELS,
+  SUBTOPICS,
 } from "../memory/user-facts.js";
 import type { Category } from "../memory/user-facts.js";
+import type { ToolContext } from "./index.js";
 
 export const noteAboutUserToolDef: ChatCompletionTool = {
   type: "function",
@@ -84,58 +81,97 @@ export const updateUserFactToolDef: ChatCompletionTool = {
   },
 };
 
-// Store client/model reference for regenerateProfile calls
-let _client: ChatClient | null = null;
-let _model: string = "";
+async function regenerateProfile(
+  memory: Memory,
+  compress: Compressor,
+  category: Category,
+): Promise<void> {
+  const facts = memory.getFactsByCategory(category);
+  if (facts.length === 0) {
+    // No facts left — remove profile by upserting empty (or we could delete)
+    // For safety, just skip — the profile stays stale but won't grow
+    return;
+  }
 
-export function setUserFactsContext(client: ChatClient, model: string): void {
-  _client = client;
-  _model = model;
+  const factList = facts.map((f) => `- ${f.fact}`).join("\n");
+  const summary = await compress(
+    `Summarize the following facts about a user into a concise profile paragraph (2-4 sentences). ` +
+    `Category: ${CATEGORY_LABELS[category]}. Write in third person. ` +
+    `Reply with ONLY the summary, nothing else.`,
+    factList,
+  );
+
+  if (summary.trim()) {
+    memory.upsertProfile(category, summary.trim());
+  }
+}
+
+export async function generateNextQuestion(
+  memory: Memory,
+  compress: Compressor,
+): Promise<void> {
+  const category = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
+  const subs = SUBTOPICS[category];
+  const topic = subs[Math.floor(Math.random() * subs.length)];
+
+  const profiles = memory.getAllProfiles();
+  const known = profiles[category];
+
+  let prompt =
+    `Write a short, casual question asking someone about ${topic}.\n` +
+    `The question must ask about a concrete fact, not feelings or hypotheticals.\n` +
+    `Reply with ONLY the question, nothing else. No quotes. One sentence.`;
+
+  if (known) {
+    prompt += `\n\nWe already know this about them:\n${known}\nAsk about something NOT covered above.`;
+  }
+
+  const question = await compress("", prompt);
+  if (question.trim()) {
+    memory.setKv("next_question", `[${category}] ${question.trim()}`);
+  }
 }
 
 export async function executeNoteAboutUser(
   category: Category,
   fact: string,
+  ctx: ToolContext,
 ): Promise<string> {
-  const id = insertFact(category, fact);
-  if (_client) {
-    await regenerateProfile(_client, _model, category);
-    generateNextQuestion(_client, _model).catch(() => {});
-  }
+  const id = ctx.memory.insertFact(category, fact);
+  await regenerateProfile(ctx.memory, ctx.compress, category);
+  generateNextQuestion(ctx.memory, ctx.compress).catch(() => {});
   return `Noted (id=${id}): ${fact}`;
 }
 
 export async function executeGetUserFacts(
   category: Category,
+  ctx: ToolContext,
 ): Promise<string> {
-  const facts = getFactsByCategory(category);
+  const facts = ctx.memory.getFactsByCategory(category);
   if (facts.length === 0) return `No facts recorded for "${category}".`;
   return facts.map((f) => `[${f.id}] ${f.fact}`).join("\n");
 }
 
 export async function executeUpdateUserFact(
   id: number,
-  fact?: string,
-  del?: boolean,
+  fact: string | undefined,
+  del: boolean | undefined,
+  ctx: ToolContext,
 ): Promise<string> {
-  const category = getCategoryForFact(id);
+  const category = ctx.memory.getCategoryForFact(id);
   if (!category) return `Fact #${id} not found.`;
 
   if (del) {
-    deleteFact(id);
-    if (_client) {
-      await regenerateProfile(_client, _model, category);
-      generateNextQuestion(_client, _model).catch(() => {});
-    }
+    ctx.memory.deleteFact(id);
+    await regenerateProfile(ctx.memory, ctx.compress, category);
+    generateNextQuestion(ctx.memory, ctx.compress).catch(() => {});
     return `Deleted fact #${id}.`;
   }
 
   if (fact) {
-    updateFact(id, fact);
-    if (_client) {
-      await regenerateProfile(_client, _model, category);
-      generateNextQuestion(_client, _model).catch(() => {});
-    }
+    ctx.memory.updateFact(id, fact);
+    await regenerateProfile(ctx.memory, ctx.compress, category);
+    generateNextQuestion(ctx.memory, ctx.compress).catch(() => {});
     return `Updated fact #${id}: ${fact}`;
   }
 

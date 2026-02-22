@@ -1,14 +1,16 @@
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import type { Message, ChatEntry } from "../types.js";
-import { saveMessage } from "../memory/index.js";
+import type { Memory } from "../memory/memory.js";
 
 export class Clerk {
   private messages: Message[] = [];
   private entries: ChatEntry[] = [];
   private conversationId: string | null = null;
   private currentEmotion: string = "neutral";
+  private memory: Memory;
 
-  constructor(systemPrompt: string) {
+  constructor(systemPrompt: string, memory: Memory) {
+    this.memory = memory;
     const msg: Message = { role: "system", content: systemPrompt };
     this.messages = [msg];
     this.entries = [{ message: msg }];
@@ -48,7 +50,7 @@ export class Clerk {
 
     if (this.conversationId) {
       try {
-        saveMessage(this.conversationId, entry);
+        this.memory.saveMessage(this.conversationId, entry);
       } catch {}
     }
   }

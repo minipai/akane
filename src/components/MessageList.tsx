@@ -15,7 +15,7 @@ const EMOTION_EMOJI: Record<string, string> = {
   amused: "(„ᵕᴗᵕ„)",
   proud: "ᕙ( •̀ ᗜ •́)ᕗ ",
   embarrassed: "( ˶>﹏<˶ᵕ)",
-  anxious: "=͟͟͞͞(꒪ᗜ꒪‧̣̥̇)",
+  anxious: "(ó﹏ò｡)",
   determined: "(๑•̀ ᴗ•́)૭✧",
   playful: "ヾ( ˃ᴗ˂ )◞ • *✰",
 };
@@ -50,12 +50,12 @@ export default function MessageList({ entries }: Props) {
           <Box key={i} marginBottom={0}>
             <Box flexShrink={0}>
               <Text color={isAssistant ? "#ff77ff" : "green"} bold>
-                {isAssistant ? "Kana" : (process.env.USER_NAME || "You")}{" "}
+                {isAssistant ? "Kana" : process.env.USER_NAME || "You"}{" "}
               </Text>
-              {isAssistant && emoji && (
-                <Text color="#ff77ff">{emoji} </Text>
-              )}
-              <Text color={isAssistant ? "#ff77ff" : "green"} bold>:{" "}</Text>
+              {isAssistant && emoji && <Text color="#ff77ff">{emoji} </Text>}
+              <Text color={isAssistant ? "#ff77ff" : "green"} bold>
+                :{" "}
+              </Text>
             </Box>
             <Text wrap="wrap">{content}</Text>
           </Box>

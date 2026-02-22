@@ -1,16 +1,8 @@
 import React, { useState, useRef } from "react";
 import { Box, Text, useInput, useStdout, useApp } from "ink";
 import TextInput from "ink-text-input";
-
-interface SlashCommand {
-  name: string;
-  description: string;
-}
-
-function filterCommands(commands: SlashCommand[], query: string): SlashCommand[] {
-  const q = query.toLowerCase();
-  return commands.filter((cmd) => cmd.name.startsWith(q));
-}
+import CommandMenu, { filterCommands } from "./CommandMenu.js";
+import type { SlashCommand } from "./CommandMenu.js";
 
 interface Props {
   onSubmit: (text: string) => void;
@@ -155,27 +147,7 @@ export default function InputBar({ onSubmit, disabled, approvalMode, onApproval,
     <Box flexDirection="column">
       <Text dimColor>{line}</Text>
       {menuOpen && (
-        <Box flexDirection="column">
-          {commands.map((cmd) => {
-            const visible = filtered.includes(cmd);
-            const i = filtered.indexOf(cmd);
-            const selected = visible && i === menuIndex;
-            return (
-              <Box key={cmd.name}>
-                {visible ? (
-                  <>
-                    <Text color={selected ? "#ff77ff" : undefined} bold={selected}>
-                      {selected ? "❯ " : "  "}{"/"}{cmd.name}
-                    </Text>
-                    <Text dimColor>  {cmd.description}</Text>
-                  </>
-                ) : (
-                  <Text> </Text>
-                )}
-              </Box>
-            );
-          })}
-        </Box>
+        <CommandMenu commands={commands} filtered={filtered} menuIndex={menuIndex} />
       )}
       <Box>
         <Text color="green" bold>

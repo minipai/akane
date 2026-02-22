@@ -8,6 +8,7 @@ import { Clerk } from "./clerk.js";
 import { Vitals } from "./vitals.js";
 import { Technician } from "./technician.js";
 import { Receptionist } from "./receptionist.js";
+import { Secretary } from "./secretary.js";
 import type { OnToolActivity, OnToolApproval, OnEmotionChange } from "./technician.js";
 
 export type { OnToolActivity, OnToolApproval, OnEmotionChange };
@@ -20,29 +21,44 @@ const MAX_ITERATIONS = 10;
 export class Agent {
   private client: ChatClient;
   private model: string;
+  private buildPrompt: () => string;
   private clerk: Clerk;
   readonly vitals = new Vitals();
   private technician = new Technician();
   readonly receptionist = new Receptionist();
+  private secretary: Secretary;
   private isFirstUserMessage = true;
 
-  constructor(client: ChatClient, model: string, systemPrompt: string) {
+  constructor(client: ChatClient, model: string, buildPrompt: () => string) {
     this.client = client;
     this.model = model;
-    this.clerk = new Clerk(systemPrompt);
-    this.receptionist.setRunChat((text) => this.run(text));
+    this.buildPrompt = buildPrompt;
+    this.clerk = new Clerk(buildPrompt());
+    this.secretary = new Secretary(client, model);
+    this.receptionist.setAgent(this);
   }
 
-  setConversationId(id: string): void {
-    this.clerk.setConversationId(id);
+  /** Resume or create a session. Returns displayFromIndex for the UI. */
+  start(): number {
+    const { conversationId, entries, displayFromIndex } = this.secretary.resume();
+    this.clerk.setConversationId(conversationId);
+    if (entries.length > 0) {
+      this.clerk.hydrate(entries);
+      this.vitals.restoreFromCache();
+      this.isFirstUserMessage = false;
+    }
+    return displayFromIndex;
   }
 
-  getConversationId(): string | null {
-    return this.clerk.getConversationId();
-  }
+  /** End the current session and start a fresh one. */
+  async rest(): Promise<void> {
+    const currentId = this.clerk.getConversationId()!;
+    const entries = this.clerk.getEntries();
 
-  setResetSession(fn: () => Promise<void>): void {
-    this.receptionist.setResetSession(fn);
+    // Reset agent immediately so it's ready for the new session
+    this.clerk.reset(this.buildPrompt());
+    const newId = await this.secretary.rest(currentId, entries);
+    this.clerk.setConversationId(newId);
   }
 
   setOnToolActivity(cb: OnToolActivity): void {
@@ -63,18 +79,6 @@ export class Agent {
 
   getEntries(): ChatEntry[] {
     return this.clerk.getEntries();
-  }
-
-  hydrate(entries: ChatEntry[]): void {
-    this.clerk.hydrate(entries);
-    this.vitals.restoreFromCache();
-    if (entries.length > 0) {
-      this.isFirstUserMessage = false;
-    }
-  }
-
-  reset(systemPrompt?: string): void {
-    this.clerk.reset(systemPrompt);
   }
 
   async run(userInput: string): Promise<string> {

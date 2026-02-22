@@ -1,4 +1,5 @@
 import { EventEmitter } from "events";
+import type { Agent } from "./agent.js";
 
 export interface SlashCommand {
   name: string;
@@ -19,15 +20,10 @@ export class Receptionist extends EventEmitter<ReceptionistEvents> {
     { name: "quit", description: "Exit the app" },
     { name: "rest", description: "End session and start fresh" },
   ];
-  private resetSession?: () => Promise<void>;
-  private runChat?: (text: string) => Promise<string>;
+  private agent?: Agent;
 
-  setResetSession(fn: () => Promise<void>): void {
-    this.resetSession = fn;
-  }
-
-  setRunChat(fn: (text: string) => Promise<string>): void {
-    this.runChat = fn;
+  setAgent(agent: Agent): void {
+    this.agent = agent;
   }
 
   /** Handle user input — parse, execute, and emit events. */
@@ -35,7 +31,7 @@ export class Receptionist extends EventEmitter<ReceptionistEvents> {
     if (!text.startsWith("/")) {
       this.emit("chat:before", text);
       try {
-        await this.runChat?.(text);
+        await this.agent?.run(text);
         this.emit("chat:after");
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Unknown error";
@@ -51,7 +47,7 @@ export class Receptionist extends EventEmitter<ReceptionistEvents> {
         return;
       case "rest":
         this.emit("rest:before");
-        await this.resetSession?.();
+        await this.agent?.rest();
         this.emit("rest:after");
         return;
     }

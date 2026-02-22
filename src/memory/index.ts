@@ -1,9 +1,9 @@
 import { randomUUID } from "crypto";
-import { eq, desc, and, isNotNull, gte } from "drizzle-orm";
+import { eq, desc, and, isNull, isNotNull, gte, inArray } from "drizzle-orm";
 import { getDb } from "./db.js";
 import { conversations, messages } from "./schema.js";
 import { getKv, getKvUpdatedAt, setKv } from "./kv.js";
-import type { ChatEntry } from "../types.js";
+import type { ChatEntry, Message } from "../types.js";
 import type OpenAI from "openai";
 
 export function initMemory(): void {
@@ -17,6 +17,43 @@ export function createConversation(): string {
     .values({ id, startedAt: new Date().toISOString() })
     .run();
   return id;
+}
+
+export function getActiveConversation(): string | null {
+  const db = getDb();
+  const row = db
+    .select({ id: conversations.id })
+    .from(conversations)
+    .where(isNull(conversations.endedAt))
+    .orderBy(desc(conversations.startedAt))
+    .limit(1)
+    .get();
+  return row?.id ?? null;
+}
+
+export function getConversationMessages(conversationId: string): ChatEntry[] {
+  const db = getDb();
+  const rows = db
+    .select()
+    .from(messages)
+    .where(
+      and(
+        eq(messages.conversationId, conversationId),
+        inArray(messages.role, ["user", "assistant"]),
+      ),
+    )
+    .orderBy(messages.id)
+    .all();
+
+  return rows.map((row) => {
+    const message: Message = {
+      role: row.role as "user" | "assistant",
+      content: row.content ?? "",
+    };
+    const entry: ChatEntry = { message };
+    if (row.emotion) entry.emotion = row.emotion;
+    return entry;
+  });
 }
 
 export function saveMessage(

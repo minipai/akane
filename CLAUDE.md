@@ -62,7 +62,8 @@ src/
 - **Emotion system**: `set_emotion` tool lets the LLM express emotions, displayed as kaomoji next to messages
 - **Colors**: Use hex colors like `#ff77ff` instead of ANSI names (e.g. `"magenta"`) — some terminals remap ANSI colors
 - **Prompt files**: `IDENTITY.md` and `USER.md` contain personal info and are blank in git history. Do not commit real content.
-- **Memory system**: SQLite DB at `memory.db` (project root, gitignored) persists conversations and messages. On startup, recent conversation summaries are injected into the system prompt. On exit, an LLM-generated summary is saved for future context.
+- **Session persistence**: Sessions persist across restarts. On startup, the app resumes the last active (un-ended) conversation and loads the last 2 user/assistant message pairs. `/rest` command ends the current session (with summary) and starts fresh. Exiting the app leaves the session open for next launch.
+- **Memory system**: SQLite DB at `memory.db` (project root, gitignored) persists conversations and messages. On startup, recent conversation summaries are injected into the system prompt.
 - **Diary system**: Hierarchical memory compression chain — conversation summaries → daily → weekly → monthly → quarterly → yearly. Generated lazily on startup when a previous period is complete (fire-and-forget, non-blocking). Injected into system prompt as `# Memory` with subsections by granularity. Schema: `diary` table with composite PK `(type, date)`.
 - **User profile memory**: AI-maintained facts about the user. Individual facts in `user_facts`, per-category LLM summaries in `user_profile`. Three auto-approved tools: `note_about_user`, `get_user_facts`, `update_user_fact`. Summaries regenerated on each mutation and injected into the system prompt as `# User Profile`. Categories:
   - `identity` — name, location, language, nationality, timezone, demographics

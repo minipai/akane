@@ -6,7 +6,7 @@ import type {
 import type { Message, ChatEntry, ToolActivity, ToolApprovalRequest, TokenUsage } from "./types.js";
 import { tools, executeTool, autoApprovedTools } from "./tools/index.js";
 import { saveMessage } from "./memory/index.js";
-import { getKv } from "./memory/kv.js";
+import { getKv, setKv } from "./memory/kv.js";
 import { generateNextQuestion } from "./memory/user-facts.js";
 
 const MAX_ITERATIONS = 10;
@@ -38,6 +38,10 @@ export class Agent {
 
   setConversationId(id: string): void {
     this.conversationId = id;
+  }
+
+  getConversationId(): string | null {
+    return this.conversationId;
   }
 
   setMpMax(max: number): void {
@@ -75,6 +79,24 @@ export class Agent {
 
   getTokenUsage(): TokenUsage {
     return this.lastUsage;
+  }
+
+  hydrate(entries: ChatEntry[]): void {
+    for (const entry of entries) {
+      this.messages.push(entry.message);
+      this.entries.push(entry);
+      if (entry.message.role === "assistant" && entry.emotion) {
+        this.currentEmotion = entry.emotion;
+      }
+    }
+    if (entries.length > 0) {
+      this.isFirstUserMessage = false;
+    }
+    // Restore cached token usage from last API call
+    const cached = getKv("last_token_usage");
+    if (cached) {
+      try { this.lastUsage = JSON.parse(cached); } catch {}
+    }
   }
 
   reset(systemPrompt?: string): void {
@@ -185,6 +207,7 @@ export class Agent {
         promptTokens: response.usage.prompt_tokens,
         totalTokens: response.usage.total_tokens,
       };
+      setKv("last_token_usage", JSON.stringify(this.lastUsage));
     }
 
     return response.choices[0]?.message ?? null;

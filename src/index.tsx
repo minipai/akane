@@ -9,6 +9,8 @@ import {
   initMemory,
   createConversation,
   endConversation,
+  getActiveConversation,
+  getConversationMessages,
   getRecentConversationSummary,
   updateRecentConversationSummary,
   getRecentDiaries,
@@ -37,26 +39,38 @@ if (!getKv("next_question")) {
 }
 
 // Build memory context from DB
-const memory: MemoryContext = {
-  recentSummary: getRecentConversationSummary(),
-  dailies: getRecentDiaries("daily", 7),
-  weeklies: getRecentDiaries("weekly", 3),
-  monthlies: getRecentDiaries("monthly", 2),
-  quarterlies: getRecentDiaries("quarterly", 3),
-  yearlies: getRecentDiaries("yearly", 3),
-  userProfile: getAllProfiles(),
-};
+function buildMemory(): MemoryContext {
+  return {
+    recentSummary: getRecentConversationSummary(),
+    dailies: getRecentDiaries("daily", 7),
+    weeklies: getRecentDiaries("weekly", 3),
+    monthlies: getRecentDiaries("monthly", 2),
+    quarterlies: getRecentDiaries("quarterly", 3),
+    yearlies: getRecentDiaries("yearly", 3),
+    userProfile: getAllProfiles(),
+  };
+}
 
-const conversationId = createConversation();
-
-const systemPrompt = buildSystemPrompt(memory);
+const systemPrompt = buildSystemPrompt(buildMemory());
 const agent = new Agent(client, model, systemPrompt);
-agent.setConversationId(conversationId);
 agent.setMpMax(MP_DISPLAY_MAX);
+
+// Resume active session or create a new one
+let displayFromIndex = 0;
+const existingId = getActiveConversation();
+if (existingId) {
+  agent.setConversationId(existingId);
+  const allMessages = getConversationMessages(existingId);
+  agent.hydrate(allMessages);
+  // Show only last 2 pairs (4 messages) from previous session; +1 for system prompt entry
+  displayFromIndex = Math.max(0, allMessages.length - 4) + 1;
+} else {
+  const newId = createConversation();
+  agent.setConversationId(newId);
+}
 
 async function generateSummary(): Promise<string | undefined> {
   const entries = agent.getEntries();
-  // Only summarize if there are actual user/assistant messages beyond the system prompt
   const hasContent = entries.some(
     (e) => e.message.role === "user" || e.message.role === "assistant",
   );
@@ -94,17 +108,32 @@ async function generateSummary(): Promise<string | undefined> {
   }
 }
 
-async function cleanup() {
-  const summary = await generateSummary();
-  if (summary) {
-    await updateRecentConversationSummary(client, model, summary);
+async function resetSession(): Promise<void> {
+  const currentId = agent.getConversationId();
+
+  // Reset agent immediately so it's ready for new session
+  const newPrompt = buildSystemPrompt(buildMemory());
+  agent.reset(newPrompt);
+  const newId = createConversation();
+  agent.setConversationId(newId);
+
+  // Await summary — caller shows resting message while this runs
+  if (currentId) {
+    try {
+      const summary = await generateSummary();
+      if (summary) {
+        await updateRecentConversationSummary(client, model, summary);
+      }
+      endConversation(currentId, summary);
+    } catch {
+      endConversation(currentId);
+    }
   }
-  endConversation(conversationId, summary);
 }
 
 const instance = render(
-  <App agent={agent} model={model} contextLimit={config.contextLimit} />,
+  <App agent={agent} model={model} contextLimit={config.contextLimit} resetSession={resetSession} displayFromIndex={displayFromIndex} />,
 );
 
-// Handle graceful shutdown
-instance.waitUntilExit().then(() => cleanup());
+// Handle graceful shutdown — no summary on exit, session stays open
+instance.waitUntilExit().then(() => {});

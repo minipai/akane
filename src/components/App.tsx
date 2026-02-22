@@ -5,6 +5,7 @@ import Banner from "./Banner.js";
 import MessageList from "./MessageList.js";
 import ToolPanel from "./ToolPanel.js";
 import InputBar from "./InputBar.js";
+import ApprovalBar from "./ApprovalBar.js";
 import StatusBar from "./StatusBar.js";
 import type { Agent } from "../agent/agent.js";
 import type { ChatEntry, ToolActivity, ToolApprovalRequest } from "../agent/agent.js";
@@ -121,12 +122,7 @@ export default function App({ agent, dispatch, model }: Props) {
       )}
 
       {pendingApproval ? (
-        <InputBar
-          onSubmit={() => {}}
-          disabled={false}
-          approvalMode={true}
-          onApproval={handleApproval}
-        />
+        <ApprovalBar onApproval={handleApproval} />
       ) : (
         <InputBar onSubmit={handleSubmit} disabled={loading} commands={dispatch.commands} />
       )}

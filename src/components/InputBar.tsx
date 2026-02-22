@@ -7,12 +7,10 @@ import type { SlashCommand } from "./CommandMenu.js";
 interface Props {
   onSubmit: (text: string) => void;
   disabled: boolean;
-  approvalMode?: boolean;
-  onApproval?: (approved: boolean) => void;
   commands?: SlashCommand[];
 }
 
-export default function InputBar({ onSubmit, disabled, approvalMode, onApproval, commands = [] }: Props) {
+export default function InputBar({ onSubmit, disabled, commands = [] }: Props) {
   const { exit } = useApp();
   const [value, setValue] = useState("");
   const historyRef = useRef<string[]>([]);
@@ -48,7 +46,7 @@ export default function InputBar({ onSubmit, disabled, approvalMode, onApproval,
       }
       return;
     }
-    if (disabled || approvalMode) return;
+    if (disabled) return;
 
     if (menuOpen) {
       if (key.upArrow) {
@@ -111,37 +109,6 @@ export default function InputBar({ onSubmit, disabled, approvalMode, onApproval,
     onSubmit(text.trim());
     setValue("");
   };
-
-  const handleApproval = (text: string) => {
-    const input = text.trim().toLowerCase();
-    if (input === "y" || input === "yes" || input === "") {
-      onApproval?.(true);
-    } else if (input === "n" || input === "no") {
-      onApproval?.(false);
-    }
-    setValue("");
-  };
-
-  if (approvalMode) {
-    return (
-      <Box flexDirection="column">
-        <Text dimColor>{line}</Text>
-        <Box>
-          <Text color="yellow" bold>
-            {"[y/n] "}{" "}
-          </Text>
-          <TextInput
-            value={value}
-            onChange={setValue}
-            onSubmit={handleApproval}
-            placeholder="y to approve, n to deny"
-            focus={true}
-          />
-        </Box>
-        <Text dimColor>{line}</Text>
-      </Box>
-    );
-  }
 
   return (
     <Box flexDirection="column">

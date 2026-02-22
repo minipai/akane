@@ -40,7 +40,10 @@ export default function App({ agent, dispatch, model }: Props) {
       displayFrom.current = 0;
       setEntries([{ message: { role: "assistant", content: "(｡-ω-)zzZ Resting..." }, emotion: "neutral" }]);
     });
-    ev.on("rest:after", () => setEntries([...agent.getEntries()]));
+    ev.on("rest:after", () => {
+      agent.vitals.setTotalTokens(0);
+      setEntries([...agent.getEntries()]);
+    });
     ev.on("chat:before", (text) => {
       setEntries([...agent.getEntries(), { message: { role: "user", content: text } }]);
       setLoading(true);

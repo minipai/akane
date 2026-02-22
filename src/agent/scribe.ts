@@ -2,7 +2,7 @@ import type { ChatCompletionMessageParam } from "openai/resources/chat/completio
 import type { Message, ChatEntry } from "../types.js";
 import type { Memory } from "../memory/memory.js";
 
-export class Clerk {
+export class Scribe {
   private messages: Message[] = [];
   private entries: ChatEntry[] = [];
   private conversationId: string | null = null;

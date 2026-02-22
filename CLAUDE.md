@@ -33,7 +33,7 @@ src/
 │   └── dispatch.ts      # createDispatch() — slash command parsing, chat routing, event emitter
 ├── agent/
 │   ├── agent.ts         # Agent class — conversation loop, tool execution, emotions
-│   ├── clerk.ts         # Clerk — message history, system prompt, conversation state
+│   ├── scribe.ts        # Scribe — message history, system prompt, conversation state
 │   ├── technician.ts    # Technician — tool execution, approval flow, emotion extraction
 │   ├── secretary.ts     # Secretary — session lifecycle (resume, rest, summaries)
 │   └── vitals.ts        # Vitals — token tracking, HP bar (API spend), status hints

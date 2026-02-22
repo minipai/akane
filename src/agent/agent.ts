@@ -6,7 +6,7 @@ import type { Cache } from "../boot/cache.js";
 import { tools, formatToolArgs } from "../tools/index.js";
 import { buildSystemPrompt } from "../prompts/index.js";
 import { generateNextQuestion } from "../tools/user-facts.js";
-import { Clerk } from "./clerk.js";
+import { Scribe } from "./scribe.js";
 import { Vitals } from "./vitals.js";
 import { Technician } from "./technician.js";
 import { Secretary } from "./secretary.js";
@@ -23,7 +23,7 @@ export class Agent {
   private memory: Memory;
   private cache: Cache;
   private buildPrompt: () => string;
-  private clerk: Clerk;
+  private scribe: Scribe;
   readonly vitals: Vitals;
   private technician: Technician;
   private secretary: Secretary;
@@ -34,7 +34,7 @@ export class Agent {
     this.memory = memory;
     this.cache = cache;
     this.buildPrompt = () => buildSystemPrompt(memory.buildContext(cache.recentSummary));
-    this.clerk = new Clerk(this.buildPrompt(), memory);
+    this.scribe = new Scribe(this.buildPrompt(), memory);
     this.vitals = new Vitals(cache);
     this.technician = new Technician(memory, cache, client.compress.bind(client));
     this.secretary = new Secretary(memory, cache, client.compress.bind(client));
@@ -50,9 +50,9 @@ export class Agent {
     }
 
     const { conversationId, entries, displayFromIndex } = this.secretary.resume();
-    this.clerk.setConversationId(conversationId);
+    this.scribe.setConversationId(conversationId);
     if (entries.length > 0) {
-      this.clerk.hydrate(entries);
+      this.scribe.hydrate(entries);
       this.isFirstUserMessage = false;
     }
     return displayFromIndex;
@@ -60,13 +60,13 @@ export class Agent {
 
   /** End the current session and start a fresh one. */
   async rest(): Promise<void> {
-    const currentId = this.clerk.getConversationId()!;
-    const entries = this.clerk.getEntries();
+    const currentId = this.scribe.getConversationId()!;
+    const entries = this.scribe.getEntries();
 
     // Reset agent immediately so it's ready for the new session
-    this.clerk.reset(this.buildPrompt());
+    this.scribe.reset(this.buildPrompt());
     const newId = await this.secretary.rest(currentId, entries);
-    this.clerk.setConversationId(newId);
+    this.scribe.setConversationId(newId);
   }
 
   setOnToolActivity(cb: OnToolActivity): void {
@@ -82,15 +82,15 @@ export class Agent {
   }
 
   getMessages() {
-    return this.clerk.getMessages();
+    return this.scribe.getMessages();
   }
 
   getEntries(): ChatEntry[] {
-    return this.clerk.getEntries();
+    return this.scribe.getEntries();
   }
 
   async run(userInput: string): Promise<string> {
-    this.clerk.addMessage({ role: "user", content: userInput });
+    this.scribe.addMessage({ role: "user", content: userInput });
 
     // Nudge the model to ask a personal question on casual greetings
     if (this.isFirstUserMessage && userInput.trim().length < 20) {
@@ -98,7 +98,7 @@ export class Agent {
       const nudge = question
         ? `After greeting, you MUST ask this exact question (translate to the conversation language if needed): ${question}`
         : "Greet the user and casually ask something about themselves to get to know them better.";
-      this.clerk.pushRaw({ role: "developer", content: nudge } as any);
+      this.scribe.pushRaw({ role: "developer", content: nudge } as any);
       // Pre-generate a fresh question for next session
       generateNextQuestion(this.memory, this.cache, this.client.compress.bind(this.client)).catch(() => {});
     }
@@ -108,7 +108,7 @@ export class Agent {
       const message = await this.callLLM();
       if (!message) return "(no response)";
 
-      this.clerk.addMessage(message);
+      this.scribe.addMessage(message);
 
       const calls = message.tool_calls?.filter((tc) => tc.type === "function");
       if (!calls || calls.length === 0) {
@@ -117,9 +117,9 @@ export class Agent {
 
       const { results, emotion } = await this.technician.run(calls);
 
-      if (emotion) this.clerk.setEmotion(emotion);
+      if (emotion) this.scribe.setEmotion(emotion);
       for (const r of results) {
-        this.clerk.addMessage({ role: "tool", tool_call_id: r.tool_call_id, content: r.content });
+        this.scribe.addMessage({ role: "tool", tool_call_id: r.tool_call_id, content: r.content });
       }
     }
 
@@ -128,7 +128,7 @@ export class Agent {
 
   private async callLLM(): Promise<ChatCompletionMessage | null> {
     const messages = [
-      ...this.clerk.getMessages(),
+      ...this.scribe.getMessages(),
       { role: "developer", content: this.vitals.buildHints() } as any,
     ];
 

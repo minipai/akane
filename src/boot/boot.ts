@@ -8,12 +8,12 @@ import type { Dispatch } from "./dispatch.js";
 
 export type { Dispatch };
 
-export function boot(): { agent: Agent; model: string; displayFromIndex: number; dispatch: Dispatch } {
+export function boot(): { agent: Agent; model: string; dispatch: Dispatch } {
   const { client, model } = createClient(config);
   const memory = new SqliteMemory(client.compress.bind(client));
   const cache = createCache();
   const agent = new Agent(client, memory, cache);
-  const displayFromIndex = agent.start();
+  agent.start();
   const dispatch = createDispatch(agent);
-  return { agent, model, displayFromIndex, dispatch };
+  return { agent, model, dispatch };
 }

@@ -29,7 +29,7 @@ src/
 │   ├── config.ts        # Environment config (API key, model, context limit)
 │   ├── client.ts        # OpenAI client factory
 │   ├── cache.ts         # Cache — ephemeral runtime state (tokens, daily cost, next question, recent summary)
-│   ├── startup.ts       # boot() — wires client, memory, cache, agent, dispatch; returns everything App needs
+│   ├── boot.ts          # boot() — wires client, memory, cache, agent, dispatch; returns everything App needs
 │   └── dispatch.ts      # createDispatch() — slash command parsing, chat routing, event emitter
 ├── agent/
 │   ├── agent.ts         # Agent class — conversation loop, tool execution, emotions

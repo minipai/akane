@@ -40,8 +40,8 @@ export class Agent {
     this.secretary = new Secretary(memory, cache, client.compress.bind(client));
   }
 
-  /** Resume or create a session. Returns displayFromIndex for the UI. */
-  start(): number {
+  /** Resume or create a session. */
+  start(): void {
     // Fire-and-forget boot-time memory ops
     const compress = this.client.compress.bind(this.client);
     this.memory.fadeMemories().catch(() => {});
@@ -49,13 +49,12 @@ export class Agent {
       generateNextQuestion(this.memory, this.cache, compress).catch(() => {});
     }
 
-    const { conversationId, entries, displayFromIndex } = this.secretary.resume();
+    const { conversationId, entries } = this.secretary.resume();
     this.scribe.setConversationId(conversationId);
     if (entries.length > 0) {
       this.scribe.hydrate(entries);
       this.isFirstUserMessage = false;
     }
-    return displayFromIndex;
   }
 
   /** End the current session and start a fresh one. */

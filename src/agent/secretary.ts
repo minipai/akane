@@ -14,15 +14,13 @@ export class Secretary {
   }
 
   /** Resume an existing session or create a new one. */
-  resume(): { conversationId: string; entries: ChatEntry[]; displayFromIndex: number } {
+  resume(): { conversationId: string; entries: ChatEntry[] } {
     const existingId = this.memory.getActiveConversation();
     if (existingId) {
       const entries = this.memory.getConversationMessages(existingId);
-      // Show only last 2 pairs (4 messages); +1 for system prompt entry
-      const displayFromIndex = Math.max(0, entries.length - 4) + 1;
-      return { conversationId: existingId, entries, displayFromIndex };
+      return { conversationId: existingId, entries };
     }
-    return { conversationId: this.memory.createConversation(), entries: [], displayFromIndex: 0 };
+    return { conversationId: this.memory.createConversation(), entries: [] };
   }
 
   /** End the current session with a summary, start a fresh one. Returns new conversation ID. */

@@ -15,13 +15,13 @@ interface Props {
   agent: Agent;
   dispatch: Dispatch;
   model: string;
-  displayFromIndex: number;
 }
 
-export default function App({ agent, dispatch, model, displayFromIndex }: Props) {
+export default function App({ agent, dispatch, model }: Props) {
   const { exit } = useApp();
   const [entries, setEntries] = useState<ChatEntry[]>(agent.getEntries());
-  const displayFrom = useRef(displayFromIndex);
+  // Show only last 2 pairs (4 messages) on resume; +1 for system prompt entry
+  const displayFrom = useRef(Math.max(0, agent.getEntries().length - 4) + 1);
   const [loading, setLoading] = useState(false);
   const [toolActivity, setToolActivity] = useState<ToolActivity | null>(null);
   const [pendingApproval, setPendingApproval] =

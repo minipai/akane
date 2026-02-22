@@ -5,7 +5,8 @@ import Banner from "./Banner.js";
 import MessageList from "./MessageList.js";
 import ToolPanel from "./ToolPanel.js";
 import InputBar from "./InputBar.js";
-import StatusBar from "./StatusBar.js";
+import StatusBar, { HP_DAILY_BUDGET } from "./StatusBar.js";
+import { getDailySpend } from "../memory/costs.js";
 import type { Agent } from "../agent.js";
 import type {
   ChatEntry,
@@ -32,11 +33,20 @@ export default function App({ agent, model, contextLimit }: Props) {
   });
   const [pendingApproval, setPendingApproval] =
     useState<ToolApprovalRequest | null>(null);
+  const [dailyCost, setDailyCost] = useState(0);
+
+  const refreshHp = useCallback(() => {
+    getDailySpend().then((cost) => {
+      setDailyCost(cost);
+      agent.setHpRatio(Math.max(0, Math.min(1, (HP_DAILY_BUDGET - cost) / HP_DAILY_BUDGET)));
+    }).catch(() => {});
+  }, [agent]);
 
   useEffect(() => {
     agent.setOnToolActivity(setToolActivity);
     agent.setOnToolApproval(setPendingApproval);
-  }, [agent]);
+    refreshHp();
+  }, [agent, refreshHp]);
 
   const handleApproval = useCallback(
     (approved: boolean) => {
@@ -75,9 +85,10 @@ export default function App({ agent, model, contextLimit }: Props) {
       } finally {
         setLoading(false);
         setToolActivity(null);
+        refreshHp();
       }
     },
-    [agent, exit],
+    [agent, exit, refreshHp],
   );
 
   return (
@@ -126,7 +137,7 @@ export default function App({ agent, model, contextLimit }: Props) {
       ) : (
         <InputBar onSubmit={handleSubmit} disabled={loading} />
       )}
-      <StatusBar usage={tokenUsage} contextLimit={contextLimit} model={model} />
+      <StatusBar usage={tokenUsage} contextLimit={contextLimit} model={model} dailyCost={dailyCost} />
     </Box>
   );
 }

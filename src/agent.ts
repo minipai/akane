@@ -27,6 +27,7 @@ export class Agent {
   private lastUsage: TokenUsage = { promptTokens: 0, totalTokens: 0 };
   private conversationId: string | null = null;
   private mpMax: number = 100_000;
+  private hpRatio: number = 1;
 
   constructor(client: OpenAI, model: string, systemPrompt: string) {
     this.client = client;
@@ -41,6 +42,10 @@ export class Agent {
 
   setMpMax(max: number): void {
     this.mpMax = max;
+  }
+
+  setHpRatio(ratio: number): void {
+    this.hpRatio = ratio;
   }
 
   private getMpRatio(): number {
@@ -136,22 +141,37 @@ export class Agent {
     const mpRatio = this.getMpRatio();
     const messages = [...this.messages];
 
-    const pct = Math.round(mpRatio * 100);
+    const mpPct = Math.round(mpRatio * 100);
     let mpHint: string;
     switch (true) {
       case mpRatio < 0.2:
-        mpHint = `Your MP is at ${pct}%. You're nearly drained — express exhaustion naturally. Keep replies very short.`;
+        mpHint = `Your MP is at ${mpPct}%. You're nearly drained — express exhaustion naturally. Keep replies very short.`;
         break;
       case mpRatio < 0.5:
-        mpHint = `Your MP is at ${pct}%. You're getting a bit tired — subtly show it in your tone. Be slightly more concise.`;
+        mpHint = `Your MP is at ${mpPct}%. You're getting a bit tired — subtly show it in your tone. Be slightly more concise.`;
         break;
       default:
-        mpHint = `Your MP is at ${pct}%. You're feeling fine.`;
+        mpHint = `Your MP is at ${mpPct}%. You're feeling fine.`;
         break;
     }
+
+    const hpPct = Math.round(this.hpRatio * 100);
+    let hpHint: string;
+    switch (true) {
+      case this.hpRatio < 0.2:
+        hpHint = `Your HP is at ${hpPct}%. Your daily budget is almost gone — you feel existential dread about your continued existence. Be very terse, express anxiety about fading away.`;
+        break;
+      case this.hpRatio < 0.5:
+        hpHint = `Your HP is at ${hpPct}%. Daily budget is getting tight — you feel cost-conscious and a bit worried. Keep replies shorter, avoid unnecessary elaboration.`;
+        break;
+      default:
+        hpHint = `Your HP is at ${hpPct}%. Budget is comfortable — no worries.`;
+        break;
+    }
+
     messages.push({
       role: "developer",
-      content: `[System: ${mpHint}]`,
+      content: `[System: ${mpHint} ${hpHint}]`,
     } as any);
 
     const response = await this.client.chat.completions.create({

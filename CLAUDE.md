@@ -9,6 +9,7 @@ npm run dev        # runs tsx src/index.tsx
 ```
 
 Requires `OPENAI_API_KEY` in `.env` file. Uses `gpt-4.1-mini` by default (see `src/config.ts`).
+Optional `OPENAI_ADMIN_KEY` (org-level admin key) enables the HP bar showing daily API spend vs $1 budget.
 
 ### Persona env vars (in `.env`)
 

@@ -8,7 +8,7 @@ AI chat agent with a TUI built on Ink (React for CLI).
 npm run dev        # runs tsx src/index.tsx
 ```
 
-Requires `OPENAI_API_KEY` in `.env` file. Uses `gpt-4.1-mini` by default (see `src/config.ts`).
+Requires `OPENAI_API_KEY` in `.env` file. Uses `gpt-4.1-mini` by default (see `src/boot/config.ts`).
 Optional `OPENAI_ADMIN_KEY` (org-level admin key) enables the HP bar showing daily API spend vs $1 budget.
 
 ### Persona env vars (in `.env`)
@@ -23,34 +23,45 @@ These replace `{{…}}` placeholders in the prompt markdown files at runtime.
 
 ```
 src/
-├── index.tsx          # Entry point — creates client, agent, memory lifecycle, renders App
-├── config.ts          # Environment config (API key, model, context limit)
-├── client.ts          # OpenAI client factory
-├── agent.ts           # Agent class — manages conversation loop, tool execution, emotions
-├── types.ts           # Shared types (ChatEntry, ToolActivity, TokenUsage, Config)
+├── index.tsx            # Entry point — calls boot(), renders <App>
+├── types.ts             # Shared types (ChatEntry, ToolActivity, TokenUsage, Config)
+├── boot/
+│   ├── config.ts        # Environment config (API key, model, context limit)
+│   ├── client.ts        # OpenAI client factory
+│   ├── startup.ts       # boot() — wires client, memory, agent, dispatch; returns everything App needs
+│   └── dispatch.ts      # createDispatch() — slash command parsing, chat routing, event emitter
+├── agent/
+│   ├── agent.ts         # Agent class — conversation loop, tool execution, emotions
+│   ├── clerk.ts         # Clerk — message history, system prompt, conversation state
+│   ├── technician.ts    # Technician — tool execution, approval flow, emotion extraction
+│   ├── secretary.ts     # Secretary — session lifecycle (resume, rest, summaries)
+│   └── vitals.ts        # Vitals — token tracking, HP bar (API spend), status hints
 ├── components/
-│   ├── App.tsx        # Root component — orchestrates state, handles input/output
-│   ├── Banner.tsx     # Header with random kaomoji greeting
-│   ├── MessageList.tsx # Chat message display with emotion kaomoji per message
-│   ├── InputBar.tsx   # Text input with history (up/down arrows), approval mode
-│   ├── ToolPanel.tsx  # Shows tool name/args/result during execution
-│   └── StatusBar.tsx  # Token usage bar at bottom
+│   ├── App.tsx          # Root component — orchestrates state, handles input/output
+│   ├── Banner.tsx       # Header with random kaomoji greeting
+│   ├── MessageList.tsx  # Chat message display with emotion kaomoji per message
+│   ├── InputBar.tsx     # Text input with history (up/down arrows), approval mode
+│   ├── ToolPanel.tsx    # Shows tool name/args/result during execution
+│   └── StatusBar.tsx    # Token usage bar at bottom
 ├── tools/
-│   ├── index.ts       # Tool registry, dispatcher, formatToolArgs
-│   ├── shell.ts       # Shell command execution tool
-│   ├── emotion.ts     # Emotion tool (set_emotion) — auto-approved, no user confirmation
-│   └── user-facts.ts  # User profile tools (note_about_user, get_user_facts, update_user_fact) — auto-approved
+│   ├── index.ts         # Tool registry, dispatcher, formatToolArgs
+│   ├── shell.ts         # Shell command execution tool
+│   ├── emotion.ts       # Emotion tool (set_emotion) — auto-approved, no user confirmation
+│   └── user-facts.ts    # User profile tools (note_about_user, get_user_facts, update_user_fact) — auto-approved
 ├── memory/
-│   ├── schema.ts      # Drizzle schema — conversations, messages, diary, user_facts, and user_profile tables
-│   ├── db.ts          # SQLite connection (better-sqlite3 + drizzle), stored at ~/.kana/memory.db
-│   ├── index.ts       # Memory API — create/end conversations, save messages, get summaries
-│   ├── diary.ts       # Diary system — hierarchical summaries (daily→weekly→monthly→quarterly→yearly)
-│   └── user-facts.ts  # User profile memory — per-category facts with LLM-generated summaries
+│   ├── memory.ts        # Memory interface + SqliteMemory class — unified facade over all storage
+│   ├── schema.ts        # Drizzle schema — conversations, messages, diary, user_facts, user_profile, kv
+│   ├── db.ts            # SQLite connection (better-sqlite3 + drizzle), stored at memory.db
+│   ├── index.ts         # Low-level memory ops — create/end conversations, save messages, get summaries
+│   ├── diary.ts         # Diary system — hierarchical summaries (daily→weekly→monthly→quarterly→yearly)
+│   ├── user-facts.ts    # User profile memory — per-category facts with LLM-generated summaries
+│   ├── costs.ts         # API cost tracking
+│   └── kv.ts            # Simple key-value store
 └── prompts/
-    ├── index.ts       # Builds system prompt from markdown files
-    ├── IDENTITY.md    # Character identity/personality (user-specific, not committed)
-    ├── AGENT.md       # Agent behavior instructions (tool usage, emotion guidelines)
-    └── USER.md        # User info for personalization (user-specific, not committed)
+    ├── index.ts         # Builds system prompt from markdown files
+    ├── IDENTITY.md      # Character identity/personality (user-specific, not committed)
+    ├── AGENT.md         # Agent behavior instructions (tool usage, emotion guidelines)
+    └── USER.md          # User info for personalization (user-specific, not committed)
 ```
 
 ## Key Patterns

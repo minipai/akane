@@ -39,9 +39,15 @@ export function createCache(): Cache {
       try {
         const admin = new OpenAI({ apiKey: adminKey });
         const now = new Date();
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const todayStart = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+        );
         const startTime = Math.floor(todayStart.getTime() / 1000);
-        const endTime = Math.floor(now.getTime() / 1000);
+        const tomorrowStart = new Date(todayStart);
+        tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+        const endTime = Math.floor(tomorrowStart.getTime() / 1000);
 
         const response = (await (admin as any).get(
           `/organization/costs?start_time=${startTime}&end_time=${endTime}&bucket_width=1d&limit=1`,

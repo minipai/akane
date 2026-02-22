@@ -6,6 +6,7 @@ export const HP_DAILY_BUDGET = 1; // USD
 export class Vitals {
   private cache: Cache;
   private refreshTimer?: ReturnType<typeof setInterval>;
+  private onChange?: () => void;
 
   constructor(cache: Cache) {
     this.cache = cache;
@@ -39,6 +40,10 @@ export class Vitals {
     );
   }
 
+  setOnChange(cb: () => void): void {
+    this.onChange = cb;
+  }
+
   /** Fetch fresh daily cost from API, then refresh every 5 minutes. */
   startHpRefresh(): void {
     this.refresh();
@@ -50,7 +55,9 @@ export class Vitals {
   }
 
   private refresh(): void {
-    this.cache.refreshDailyCost().catch(() => {});
+    this.cache.refreshDailyCost()
+      .then(() => this.onChange?.())
+      .catch(() => {});
   }
 
   buildHints(): string {

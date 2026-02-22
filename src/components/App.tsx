@@ -26,10 +26,12 @@ export default function App({ agent, dispatch, model, displayFromIndex }: Props)
   const [toolActivity, setToolActivity] = useState<ToolActivity | null>(null);
   const [pendingApproval, setPendingApproval] =
     useState<ToolApprovalRequest | null>(null);
+  const [, setVitalsTick] = useState(0);
 
   useEffect(() => {
     agent.setOnToolActivity(setToolActivity);
     agent.setOnToolApproval(setPendingApproval);
+    agent.vitals.setOnChange(() => setVitalsTick((n) => n + 1));
     agent.vitals.startHpRefresh();
 
     const ev = dispatch.events;

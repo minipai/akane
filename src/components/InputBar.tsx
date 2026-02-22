@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { Box, Text, useInput, useStdout } from "ink";
+import { Box, Text, useInput, useStdout, useApp } from "ink";
 import TextInput from "ink-text-input";
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
 }
 
 export default function InputBar({ onSubmit, disabled, approvalMode, onApproval }: Props) {
+  const { exit } = useApp();
   const [value, setValue] = useState("");
   const historyRef = useRef<string[]>([]);
   const historyIndexRef = useRef(-1);
@@ -19,19 +20,27 @@ export default function InputBar({ onSubmit, disabled, approvalMode, onApproval 
   const line = "─".repeat(width);
 
   useInput((_input, key) => {
+    // Ctrl+C: clear input or exit
+    if (_input === "c" && key.ctrl) {
+      if (value !== "") {
+        setValue("");
+        historyIndexRef.current = -1;
+      } else {
+        exit();
+      }
+      return;
+    }
     if (disabled || approvalMode) return;
     const history = historyRef.current;
-    if (key.upArrow && history.length > 0) {
+    // Only browse history when input is empty
+    if (key.upArrow && history.length > 0 && value === "") {
       const newIndex = Math.min(historyIndexRef.current + 1, history.length - 1);
-      if (historyIndexRef.current === -1) {
-        draftRef.current = value;
-      }
       historyIndexRef.current = newIndex;
       setValue(history[history.length - 1 - newIndex]);
-    } else if (key.downArrow) {
+    } else if (key.downArrow && historyIndexRef.current >= 0) {
       if (historyIndexRef.current <= 0) {
         historyIndexRef.current = -1;
-        setValue(draftRef.current);
+        setValue("");
       } else {
         historyIndexRef.current -= 1;
         setValue(history[history.length - 1 - historyIndexRef.current]);

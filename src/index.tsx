@@ -133,6 +133,7 @@ async function resetSession(): Promise<void> {
 
 const instance = render(
   <App agent={agent} model={model} contextLimit={config.contextLimit} resetSession={resetSession} displayFromIndex={displayFromIndex} />,
+  { exitOnCtrlC: false },
 );
 
 // Handle graceful shutdown — no summary on exit, session stays open

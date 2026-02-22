@@ -1,7 +1,7 @@
 import type { Compressor } from "../types.js";
 import { and, eq, gte, lt, desc, isNotNull } from "drizzle-orm";
-import { getDb } from "./db.js";
-import { diary, conversations } from "./schema.js";
+import { getDb } from "../db/db.js";
+import { diary, conversations } from "../db/schema.js";
 
 export type DiaryType = "daily" | "weekly" | "monthly" | "quarterly" | "yearly";
 

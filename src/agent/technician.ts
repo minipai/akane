@@ -17,8 +17,8 @@ export class Technician {
   private onEmotionChange?: OnEmotionChange;
   private ctx: ToolContext;
 
-  constructor(memory: ToolContext["memory"], compress: ToolContext["compress"]) {
-    this.ctx = { memory, compress };
+  constructor(memory: ToolContext["memory"], cache: ToolContext["cache"], compress: ToolContext["compress"]) {
+    this.ctx = { memory, cache, compress };
   }
 
   setOnActivity(cb: OnToolActivity): void {

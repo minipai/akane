@@ -1,12 +1,15 @@
 import type { ChatEntry, Compressor } from "../types.js";
 import type { Memory } from "../memory/memory.js";
+import type { Cache } from "../boot/cache.js";
 
 export class Secretary {
   private memory: Memory;
+  private cache: Cache;
   private compress: Compressor;
 
-  constructor(memory: Memory, compress: Compressor) {
+  constructor(memory: Memory, cache: Cache, compress: Compressor) {
     this.memory = memory;
+    this.cache = cache;
     this.compress = compress;
   }
 
@@ -29,19 +32,19 @@ export class Secretary {
     try {
       const summary = await this.generateSummary(entries);
       if (summary) {
-        const existing = this.memory.getRecentConversationSummary();
+        const existing = this.cache.recentSummary;
         if (existing) {
           try {
             const merged = await this.compress(
               "Merge these two summaries of recent conversations into one concise paragraph (2-4 sentences). Keep all key facts, drop redundancy. Reply with ONLY the merged summary.",
               `Existing:\n${existing}\n\nNew:\n${summary}`,
             );
-            this.memory.setRecentConversationSummary(merged || `${existing} ${summary}`);
+            this.cache.recentSummary = merged || `${existing} ${summary}`;
           } catch {
-            this.memory.setRecentConversationSummary(`${existing} ${summary}`);
+            this.cache.recentSummary = `${existing} ${summary}`;
           }
         } else {
-          this.memory.setRecentConversationSummary(summary);
+          this.cache.recentSummary = summary;
         }
       }
       this.memory.endConversation(conversationId, summary);

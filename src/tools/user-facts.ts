@@ -1,5 +1,6 @@
 import type { ChatCompletionTool } from "openai/resources/chat/completions";
 import type { Memory } from "../memory/memory.js";
+import type { Cache } from "../boot/cache.js";
 import type { Compressor } from "../types.js";
 import {
   CATEGORIES,
@@ -108,6 +109,7 @@ async function regenerateProfile(
 
 export async function generateNextQuestion(
   memory: Memory,
+  cache: Cache,
   compress: Compressor,
 ): Promise<void> {
   const category = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
@@ -128,7 +130,7 @@ export async function generateNextQuestion(
 
   const question = await compress("", prompt);
   if (question.trim()) {
-    memory.setKv("next_question", `[${category}] ${question.trim()}`);
+    cache.nextQuestion = `[${category}] ${question.trim()}`;
   }
 }
 
@@ -139,7 +141,7 @@ export async function executeNoteAboutUser(
 ): Promise<string> {
   const id = ctx.memory.insertFact(category, fact);
   await regenerateProfile(ctx.memory, ctx.compress, category);
-  generateNextQuestion(ctx.memory, ctx.compress).catch(() => {});
+  generateNextQuestion(ctx.memory, ctx.cache, ctx.compress).catch(() => {});
   return `Noted (id=${id}): ${fact}`;
 }
 
@@ -164,14 +166,14 @@ export async function executeUpdateUserFact(
   if (del) {
     ctx.memory.deleteFact(id);
     await regenerateProfile(ctx.memory, ctx.compress, category);
-    generateNextQuestion(ctx.memory, ctx.compress).catch(() => {});
+    generateNextQuestion(ctx.memory, ctx.cache, ctx.compress).catch(() => {});
     return `Deleted fact #${id}.`;
   }
 
   if (fact) {
     ctx.memory.updateFact(id, fact);
     await regenerateProfile(ctx.memory, ctx.compress, category);
-    generateNextQuestion(ctx.memory, ctx.compress).catch(() => {});
+    generateNextQuestion(ctx.memory, ctx.cache, ctx.compress).catch(() => {});
     return `Updated fact #${id}: ${fact}`;
   }
 

@@ -28,7 +28,8 @@ src/
 ├── boot/
 │   ├── config.ts        # Environment config (API key, model, context limit)
 │   ├── client.ts        # OpenAI client factory
-│   ├── startup.ts       # boot() — wires client, memory, agent, dispatch; returns everything App needs
+│   ├── cache.ts         # Cache — ephemeral runtime state (tokens, daily cost, next question, recent summary)
+│   ├── startup.ts       # boot() — wires client, memory, cache, agent, dispatch; returns everything App needs
 │   └── dispatch.ts      # createDispatch() — slash command parsing, chat routing, event emitter
 ├── agent/
 │   ├── agent.ts         # Agent class — conversation loop, tool execution, emotions
@@ -48,15 +49,15 @@ src/
 │   ├── shell.ts         # Shell command execution tool
 │   ├── emotion.ts       # Emotion tool (set_emotion) — auto-approved, no user confirmation
 │   └── user-facts.ts    # User profile tools (note_about_user, get_user_facts, update_user_fact) — auto-approved
-├── memory/
-│   ├── memory.ts        # Memory interface + SqliteMemory class — unified facade over all storage
-│   ├── schema.ts        # Drizzle schema — conversations, messages, diary, user_facts, user_profile, kv
+├── db/
 │   ├── db.ts            # SQLite connection (better-sqlite3 + drizzle), stored at memory.db
-│   ├── index.ts         # Low-level memory ops — create/end conversations, save messages, get summaries
-│   ├── diary.ts         # Diary system — hierarchical summaries (daily→weekly→monthly→quarterly→yearly)
-│   ├── user-facts.ts    # User profile memory — per-category facts with LLM-generated summaries
-│   ├── costs.ts         # API cost tracking
+│   ├── schema.ts        # Drizzle schema — conversations, messages, diary, user_facts, user_profile, kv
 │   └── kv.ts            # Simple key-value store
+├── memory/
+│   ├── memory.ts        # Memory interface + SqliteMemory class — unified facade over long-term storage
+│   ├── index.ts         # Low-level memory ops — create/end conversations, save messages
+│   ├── diary.ts         # Diary system — hierarchical summaries (daily→weekly→monthly→quarterly→yearly)
+│   └── user-facts.ts    # User profile memory — per-category facts with LLM-generated summaries
 └── prompts/
     ├── index.ts         # Builds system prompt from markdown files
     ├── IDENTITY.md      # Character identity/personality (user-specific, not committed)

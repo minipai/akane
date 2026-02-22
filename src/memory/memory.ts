@@ -9,8 +9,6 @@ import {
   getActiveConversation,
   getConversationMessages,
   saveMessage,
-  getRecentConversationSummary,
-  setRecentConversationSummary,
   getRecentDiaries,
   generateDiary,
 } from "./index.js";
@@ -23,8 +21,6 @@ import {
   upsertProfile,
   getAllProfiles,
 } from "./user-facts.js";
-import { getKv, setKv } from "./kv.js";
-import { getCachedDailyCost, getDailySpend } from "./costs.js";
 
 export interface Memory {
   // Conversations
@@ -33,14 +29,6 @@ export interface Memory {
   getActiveConversation(): string | null;
   getConversationMessages(id: string): ChatEntry[];
   saveMessage(conversationId: string, entry: ChatEntry): void;
-
-  // Recent summary
-  getRecentConversationSummary(): string | null;
-  setRecentConversationSummary(summary: string): void;
-
-  // KV
-  getKv(key: string): string | null;
-  setKv(key: string, value: string): void;
 
   // Diary
   fadeMemories(): Promise<void>;
@@ -57,12 +45,8 @@ export interface Memory {
   upsertProfile(category: Category, summary: string): void;
   getAllProfiles(): Record<string, string>;
 
-  // Costs
-  getCachedDailyCost(): number;
-  getDailySpend(): Promise<number>;
-
   // Prompt context
-  buildContext(): MemoryContext;
+  buildContext(recentSummary?: string | null): MemoryContext;
 }
 
 export class SqliteMemory implements Memory {
@@ -91,22 +75,6 @@ export class SqliteMemory implements Memory {
 
   saveMessage(conversationId: string, entry: ChatEntry): void {
     saveMessage(conversationId, entry);
-  }
-
-  getRecentConversationSummary(): string | null {
-    return getRecentConversationSummary();
-  }
-
-  setRecentConversationSummary(summary: string): void {
-    setRecentConversationSummary(summary);
-  }
-
-  getKv(key: string): string | null {
-    return getKv(key);
-  }
-
-  setKv(key: string, value: string): void {
-    setKv(key, value);
   }
 
   async fadeMemories(): Promise<void> {
@@ -145,17 +113,9 @@ export class SqliteMemory implements Memory {
     return getAllProfiles();
   }
 
-  getCachedDailyCost(): number {
-    return getCachedDailyCost();
-  }
-
-  getDailySpend(): Promise<number> {
-    return getDailySpend();
-  }
-
-  buildContext(): MemoryContext {
+  buildContext(recentSummary?: string | null): MemoryContext {
     return {
-      recentSummary: this.getRecentConversationSummary(),
+      recentSummary: recentSummary ?? null,
       dailies: this.getRecentDiaries("daily", 7),
       weeklies: this.getRecentDiaries("weekly", 3),
       monthlies: this.getRecentDiaries("monthly", 2),

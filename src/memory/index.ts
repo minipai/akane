@@ -1,8 +1,7 @@
 import { randomUUID } from "crypto";
 import { eq, desc, and, isNull, isNotNull, gte, inArray } from "drizzle-orm";
-import { getDb } from "./db.js";
-import { conversations, messages } from "./schema.js";
-import { getKv, getKvUpdatedAt, setKv } from "./kv.js";
+import { getDb } from "../db/db.js";
+import { conversations, messages } from "../db/schema.js";
 import type { ChatEntry, Message } from "../types.js";
 
 export function initMemory(): void {
@@ -94,20 +93,6 @@ export function endConversation(
     })
     .where(eq(conversations.id, conversationId))
     .run();
-}
-
-function isWithin24Hours(isoTimestamp: string): boolean {
-  return Date.now() - new Date(isoTimestamp).getTime() < 24 * 60 * 60 * 1000;
-}
-
-export function getRecentConversationSummary(): string | null {
-  const updatedAt = getKvUpdatedAt("recent_conversation_summary");
-  if (!updatedAt || !isWithin24Hours(updatedAt)) return null;
-  return getKv("recent_conversation_summary");
-}
-
-export function setRecentConversationSummary(summary: string): void {
-  setKv("recent_conversation_summary", summary);
 }
 
 export { getRecentDiaries } from "./diary.js";

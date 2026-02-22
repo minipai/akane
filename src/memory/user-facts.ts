@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import { getDb } from "./db.js";
-import { userFacts, userProfile } from "./schema.js";
+import { getDb } from "../db/db.js";
+import { userFacts, userProfile } from "../db/schema.js";
 
 export const CATEGORIES = [
   "identity",    // name, location, language, nationality, timezone, demographics

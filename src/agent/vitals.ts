@@ -1,50 +1,41 @@
-import type { Memory } from "../memory/memory.js";
+import type { Cache } from "../boot/cache.js";
 
 const MP_MAX = 100_000;
 export const HP_DAILY_BUDGET = 1; // USD
 
 export class Vitals {
-  private totalTokens: number = 0;
-  private dailyCost: number;
+  private cache: Cache;
   private refreshTimer?: ReturnType<typeof setInterval>;
-  private memory: Memory;
 
-  constructor(memory: Memory) {
-    this.memory = memory;
-    this.dailyCost = memory.getCachedDailyCost();
+  constructor(cache: Cache) {
+    this.cache = cache;
   }
 
   addTokens(tokens: number): void {
-    this.totalTokens += tokens;
-    this.memory.setKv("usage_total_tokens", String(this.totalTokens));
+    this.cache.totalTokens += tokens;
   }
 
   getTotalTokens(): number {
-    return this.totalTokens;
+    return this.cache.totalTokens;
   }
 
   setTotalTokens(tokens: number): void {
-    this.totalTokens = tokens;
-  }
-
-  restoreFromCache(): void {
-    const cached = this.memory.getKv("usage_total_tokens");
-    if (cached) this.totalTokens = parseInt(cached, 10) || 0;
+    this.cache.totalTokens = tokens;
   }
 
   getDailyCost(): number {
-    return this.dailyCost;
+    return this.cache.dailyCost;
   }
 
   getMpRatio(): number {
-    const remaining = Math.max(0, MP_MAX - this.totalTokens);
+    const remaining = Math.max(0, MP_MAX - this.cache.totalTokens);
     return remaining / MP_MAX;
   }
 
   getHpRatio(): number {
     return Math.max(
       0,
-      Math.min(1, (HP_DAILY_BUDGET - this.dailyCost) / HP_DAILY_BUDGET),
+      Math.min(1, (HP_DAILY_BUDGET - this.cache.dailyCost) / HP_DAILY_BUDGET),
     );
   }
 
@@ -59,11 +50,7 @@ export class Vitals {
   }
 
   private refresh(): void {
-    this.memory.getDailySpend()
-      .then((cost) => {
-        this.dailyCost = cost;
-      })
-      .catch(() => {});
+    this.cache.refreshDailyCost().catch(() => {});
   }
 
   buildHints(): string {

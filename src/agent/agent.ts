@@ -2,6 +2,7 @@ import type { ChatClient } from "../types.js";
 import type { ChatCompletionMessage } from "openai/resources/chat/completions";
 import type { ChatEntry } from "../types.js";
 import type { Memory } from "../memory/memory.js";
+import type { Cache } from "../boot/cache.js";
 import { tools, formatToolArgs } from "../tools/index.js";
 import { buildSystemPrompt } from "../prompts/index.js";
 import { generateNextQuestion } from "../tools/user-facts.js";
@@ -20,6 +21,7 @@ const MAX_ITERATIONS = 10;
 export class Agent {
   private client: ChatClient;
   private memory: Memory;
+  private cache: Cache;
   private buildPrompt: () => string;
   private clerk: Clerk;
   readonly vitals: Vitals;
@@ -27,14 +29,15 @@ export class Agent {
   private secretary: Secretary;
   private isFirstUserMessage = true;
 
-  constructor(client: ChatClient, memory: Memory) {
+  constructor(client: ChatClient, memory: Memory, cache: Cache) {
     this.client = client;
     this.memory = memory;
-    this.buildPrompt = () => buildSystemPrompt(memory.buildContext());
+    this.cache = cache;
+    this.buildPrompt = () => buildSystemPrompt(memory.buildContext(cache.recentSummary));
     this.clerk = new Clerk(this.buildPrompt(), memory);
-    this.vitals = new Vitals(memory);
-    this.technician = new Technician(memory, client.compress.bind(client));
-    this.secretary = new Secretary(memory, client.compress.bind(client));
+    this.vitals = new Vitals(cache);
+    this.technician = new Technician(memory, cache, client.compress.bind(client));
+    this.secretary = new Secretary(memory, cache, client.compress.bind(client));
   }
 
   /** Resume or create a session. Returns displayFromIndex for the UI. */
@@ -42,15 +45,14 @@ export class Agent {
     // Fire-and-forget boot-time memory ops
     const compress = this.client.compress.bind(this.client);
     this.memory.fadeMemories().catch(() => {});
-    if (!this.memory.getKv("next_question")) {
-      generateNextQuestion(this.memory, compress).catch(() => {});
+    if (!this.cache.nextQuestion) {
+      generateNextQuestion(this.memory, this.cache, compress).catch(() => {});
     }
 
     const { conversationId, entries, displayFromIndex } = this.secretary.resume();
     this.clerk.setConversationId(conversationId);
     if (entries.length > 0) {
       this.clerk.hydrate(entries);
-      this.vitals.restoreFromCache();
       this.isFirstUserMessage = false;
     }
     return displayFromIndex;
@@ -92,13 +94,13 @@ export class Agent {
 
     // Nudge the model to ask a personal question on casual greetings
     if (this.isFirstUserMessage && userInput.trim().length < 20) {
-      const question = this.memory.getKv("next_question");
+      const question = this.cache.nextQuestion;
       const nudge = question
         ? `After greeting, you MUST ask this exact question (translate to the conversation language if needed): ${question}`
         : "Greet the user and casually ask something about themselves to get to know them better.";
       this.clerk.pushRaw({ role: "developer", content: nudge } as any);
       // Pre-generate a fresh question for next session
-      generateNextQuestion(this.memory, this.client.compress.bind(this.client)).catch(() => {});
+      generateNextQuestion(this.memory, this.cache, this.client.compress.bind(this.client)).catch(() => {});
     }
     this.isFirstUserMessage = false;
 

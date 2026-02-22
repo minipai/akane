@@ -5,7 +5,7 @@ AI chat agent with a TUI built on Ink (React for CLI).
 ## Quick Start
 
 ```
-npm run dev        # runs tsx src/index.tsx
+pnpm dev           # runs tsx src/index.tsx
 ```
 
 Requires `OPENAI_API_KEY` in `.env` file. Uses `gpt-4.1-mini` by default (see `src/boot/config.ts`).

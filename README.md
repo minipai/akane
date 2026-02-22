@@ -18,7 +18,7 @@ Kana remembers your conversations, learns about you over time, and expresses emo
 
 ```sh
 git clone <repo-url> && cd kana
-npm install
+pnpm install
 ```
 
 Create a `.env` file:
@@ -30,7 +30,7 @@ OPENAI_API_KEY=sk-...       # required
 Then run:
 
 ```sh
-npm run dev
+pnpm dev
 ```
 
 ### Optional environment variables
@@ -54,7 +54,7 @@ npm run dev
 Kana stores everything in a local SQLite file (`data/memory.db`). Errors are logged to `data/error.log`. The `data/` directory is gitignored. Migrations run automatically on startup.
 
 ```sh
-npm run db:generate   # generate migration from schema changes
-npm run db:migrate    # apply pending migrations
-npm run db:studio     # browse the DB in Drizzle Studio
+pnpm db:generate   # generate migration from schema changes
+pnpm db:migrate    # apply pending migrations
+pnpm db:studio     # browse the DB in Drizzle Studio
 ```

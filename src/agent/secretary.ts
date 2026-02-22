@@ -13,19 +13,19 @@ export class Secretary {
     this.compress = compress;
   }
 
-  /** Resume an existing session or create a new one. */
-  resume(): { conversationId: string; entries: ChatEntry[] } {
+  /** Resume an existing session, or return null to defer creation until first message. */
+  resume(): { conversationId: string | null; entries: ChatEntry[] } {
     const existingId = this.memory.getActiveConversation();
     if (existingId) {
       const entries = this.memory.getConversationMessages(existingId);
       return { conversationId: existingId, entries };
     }
-    return { conversationId: this.memory.createConversation(), entries: [] };
+    return { conversationId: null, entries: [] };
   }
 
-  /** End the current session with a summary, start a fresh one. Returns new conversation ID. */
-  async rest(conversationId: string, entries: ChatEntry[]): Promise<string> {
-    const newId = this.memory.createConversation();
+  /** End the current session with a summary. If conversationId is null, no-op. */
+  async rest(conversationId: string | null, entries: ChatEntry[]): Promise<void> {
+    if (!conversationId) return;
 
     try {
       const summary = await this.generateSummary(entries);
@@ -49,8 +49,6 @@ export class Secretary {
     } catch {
       this.memory.endConversation(conversationId);
     }
-
-    return newId;
   }
 
   private async generateSummary(entries: ChatEntry[]): Promise<string | undefined> {

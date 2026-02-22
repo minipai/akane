@@ -50,22 +50,31 @@ export class Agent {
     }
 
     const { conversationId, entries } = this.secretary.resume();
-    this.scribe.setConversationId(conversationId);
+    if (conversationId) {
+      this.scribe.setConversationId(conversationId);
+    }
     if (entries.length > 0) {
       this.scribe.hydrate(entries);
       this.isFirstUserMessage = false;
     }
   }
 
+  /** Lazily create a conversation on first message. */
+  private ensureConversation(): void {
+    if (this.scribe.getConversationId()) return;
+    const id = this.memory.createConversation();
+    this.scribe.setConversationId(id);
+  }
+
   /** End the current session and start a fresh one. */
   async rest(): Promise<void> {
-    const currentId = this.scribe.getConversationId()!;
+    const currentId = this.scribe.getConversationId();
     const entries = this.scribe.getEntries();
 
     // Reset agent immediately so it's ready for the new session
     this.scribe.reset(this.buildPrompt());
-    const newId = await this.secretary.rest(currentId, entries);
-    this.scribe.setConversationId(newId);
+    await this.secretary.rest(currentId, entries);
+    // conversationId stays null — lazy init on next message
   }
 
   setOnToolActivity(cb: OnToolActivity): void {
@@ -89,6 +98,7 @@ export class Agent {
   }
 
   async run(userInput: string): Promise<string> {
+    this.ensureConversation();
     this.scribe.addMessage({ role: "user", content: userInput });
 
     // Nudge the model to ask a personal question on casual greetings

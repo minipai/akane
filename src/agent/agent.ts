@@ -44,9 +44,9 @@ export class Agent {
   start(): void {
     // Fire-and-forget boot-time memory ops
     const compress = this.client.compress.bind(this.client);
-    this.memory.fadeMemories().catch(() => {});
+    this.memory.fadeMemories();
     if (!this.cache.nextQuestion) {
-      generateNextQuestion(this.memory, this.cache, compress).catch(() => {});
+      generateNextQuestion(this.memory, this.cache, compress);
     }
 
     const { conversationId, entries } = this.secretary.resume();
@@ -99,7 +99,7 @@ export class Agent {
         : "Greet the user and casually ask something about themselves to get to know them better.";
       this.scribe.pushRaw({ role: "developer", content: nudge } as any);
       // Pre-generate a fresh question for next session
-      generateNextQuestion(this.memory, this.cache, this.client.compress.bind(this.client)).catch(() => {});
+      generateNextQuestion(this.memory, this.cache, this.client.compress.bind(this.client));
     }
     this.isFirstUserMessage = false;
 

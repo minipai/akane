@@ -51,7 +51,12 @@ export function createDispatch(agent: {
         return;
       case "rest":
         events.emit("rest:before");
-        agent.rest().then(() => events.emit("rest:after"));
+        agent.rest()
+          .then(() => events.emit("rest:after"))
+          .catch((err: unknown) => {
+            const msg = err instanceof Error ? err.message : "Unknown error";
+            events.emit("chat:error", msg);
+          });
         return;
     }
   }

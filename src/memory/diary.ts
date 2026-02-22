@@ -238,15 +238,11 @@ async function generateYearly(compress: Compressor): Promise<void> {
 export async function generateDiary(
   compress: Compressor,
 ): Promise<void> {
-  try {
-    await generateDaily(compress);
-    await generateWeekly(compress);
-    await generateMonthly(compress);
-    await generateQuarterly(compress);
-    await generateYearly(compress);
-  } catch {
-    // Diary generation is best-effort — don't crash the app
-  }
+  await generateDaily(compress);
+  await generateWeekly(compress);
+  await generateMonthly(compress);
+  await generateQuarterly(compress);
+  await generateYearly(compress);
 }
 
 export function getRecentDiaries(type: DiaryType, limit: number): string[] {

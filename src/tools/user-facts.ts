@@ -141,7 +141,7 @@ export async function executeNoteAboutUser(
 ): Promise<string> {
   const id = ctx.memory.insertFact(category, fact);
   await regenerateProfile(ctx.memory, ctx.compress, category);
-  generateNextQuestion(ctx.memory, ctx.cache, ctx.compress).catch(() => {});
+  generateNextQuestion(ctx.memory, ctx.cache, ctx.compress);
   return `Noted (id=${id}): ${fact}`;
 }
 
@@ -166,14 +166,14 @@ export async function executeUpdateUserFact(
   if (del) {
     ctx.memory.deleteFact(id);
     await regenerateProfile(ctx.memory, ctx.compress, category);
-    generateNextQuestion(ctx.memory, ctx.cache, ctx.compress).catch(() => {});
+    generateNextQuestion(ctx.memory, ctx.cache, ctx.compress);
     return `Deleted fact #${id}.`;
   }
 
   if (fact) {
     ctx.memory.updateFact(id, fact);
     await regenerateProfile(ctx.memory, ctx.compress, category);
-    generateNextQuestion(ctx.memory, ctx.cache, ctx.compress).catch(() => {});
+    generateNextQuestion(ctx.memory, ctx.cache, ctx.compress);
     return `Updated fact #${id}: ${fact}`;
   }
 

@@ -56,8 +56,7 @@ export class Vitals {
 
   private refresh(): void {
     this.cache.refreshDailyCost()
-      .then(() => this.onChange?.())
-      .catch(() => {});
+      .then(() => this.onChange?.());
   }
 
   buildHints(): string {

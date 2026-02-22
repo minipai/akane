@@ -50,7 +50,7 @@ src/
 │   ├── emotion.ts       # Emotion tool (set_emotion) — auto-approved, no user confirmation
 │   └── user-facts.ts    # User profile tools (note_about_user, get_user_facts, update_user_fact) — auto-approved
 ├── db/
-│   ├── db.ts            # SQLite connection (better-sqlite3 + drizzle), stored at memory.db
+│   ├── db.ts            # SQLite connection (better-sqlite3 + drizzle), stored at data/memory.db
 │   ├── schema.ts        # Drizzle schema — conversations, messages, diary, user_facts, user_profile, kv
 │   └── kv.ts            # Simple key-value store
 ├── memory/
@@ -75,7 +75,7 @@ src/
 - **Colors**: Use hex colors like `#ff77ff` instead of ANSI names (e.g. `"magenta"`) — some terminals remap ANSI colors
 - **Prompt files**: `IDENTITY.md` and `USER.md` contain personal info and are blank in git history. Do not commit real content.
 - **Session persistence**: Sessions persist across restarts. On startup, the app resumes the last active (un-ended) conversation and loads the last 2 user/assistant message pairs. `/rest` command ends the current session (with summary) and starts fresh. Exiting the app leaves the session open for next launch.
-- **Memory system**: SQLite DB at `memory.db` (project root, gitignored) persists conversations and messages. On startup, recent conversation summaries are injected into the system prompt.
+- **Memory system**: SQLite DB at `data/memory.db` (gitignored `data/` dir) persists conversations and messages. On startup, recent conversation summaries are injected into the system prompt.
 - **Diary system**: Hierarchical memory compression chain — conversation summaries → daily → weekly → monthly → quarterly → yearly. Generated lazily on startup when a previous period is complete (fire-and-forget, non-blocking). Injected into system prompt as `# Memory` with subsections by granularity. Schema: `diary` table with composite PK `(type, date)`.
 - **User profile memory**: AI-maintained facts about the user. Individual facts in `user_facts`, per-category LLM summaries in `user_profile`. Three auto-approved tools: `note_about_user`, `get_user_facts`, `update_user_fact`. Summaries regenerated on each mutation and injected into the system prompt as `# User Profile`. Categories:
   - `identity` — name, location, language, nationality, timezone, demographics

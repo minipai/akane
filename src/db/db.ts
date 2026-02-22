@@ -1,5 +1,6 @@
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { mkdirSync } from "fs";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
@@ -7,7 +8,9 @@ import * as schema from "./schema.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = join(__dirname, "..", "..");
-const DB_PATH = join(PROJECT_ROOT, "memory.db");
+export const DATA_DIR = join(PROJECT_ROOT, "data");
+mkdirSync(DATA_DIR, { recursive: true });
+const DB_PATH = join(DATA_DIR, "memory.db");
 const MIGRATIONS_DIR = join(PROJECT_ROOT, "drizzle");
 
 let db: ReturnType<typeof drizzle<typeof schema>> | null = null;

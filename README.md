@@ -51,7 +51,7 @@ npm run dev
 
 ## Database
 
-Kana stores everything in a local SQLite file (`memory.db`, gitignored). Migrations run automatically on startup.
+Kana stores everything in a local SQLite file (`data/memory.db`). Errors are logged to `data/error.log`. The `data/` directory is gitignored. Migrations run automatically on startup.
 
 ```sh
 npm run db:generate   # generate migration from schema changes

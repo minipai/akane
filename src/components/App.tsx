@@ -69,7 +69,7 @@ export default function App({ agent, model, contextLimit, resetSession, displayF
 
   const handleSubmit = useCallback(
     async (text: string) => {
-      if (text === "/quit" || text === "/exit") {
+      if (text === "/quit") {
         exit();
         return;
       }

@@ -1,4 +1,4 @@
-# Akane (K.A.N.A. — Kawaii And Nice Assistant)
+# K.A.N.A. — Kawaii And Nice Assistant
 
 AI chat agent with a TUI built on Ink (React for CLI).
 

@@ -1,15 +1,19 @@
 import type { ChatClient } from "../types.js";
 import type { ChatCompletionMessage } from "openai/resources/chat/completions";
 import type { ChatEntry } from "../types.js";
-import { tools } from "../tools/index.js";
+import { tools, formatToolArgs } from "../tools/index.js";
 import { getKv } from "../memory/kv.js";
 import { generateNextQuestion } from "../memory/user-facts.js";
 import { Clerk } from "./clerk.js";
 import { Vitals } from "./vitals.js";
 import { Technician } from "./technician.js";
+import { Receptionist } from "./receptionist.js";
 import type { OnToolActivity, OnToolApproval, OnEmotionChange } from "./technician.js";
 
 export type { OnToolActivity, OnToolApproval, OnEmotionChange };
+export type { ChatEntry, ToolActivity, ToolApprovalRequest } from "../types.js";
+export type { SlashCommand } from "./receptionist.js";
+export { formatToolArgs };
 
 const MAX_ITERATIONS = 10;
 
@@ -19,12 +23,14 @@ export class Agent {
   private clerk: Clerk;
   readonly vitals = new Vitals();
   private technician = new Technician();
+  readonly receptionist = new Receptionist();
   private isFirstUserMessage = true;
 
   constructor(client: ChatClient, model: string, systemPrompt: string) {
     this.client = client;
     this.model = model;
     this.clerk = new Clerk(systemPrompt);
+    this.receptionist.setRunChat((text) => this.run(text));
   }
 
   setConversationId(id: string): void {
@@ -33,6 +39,10 @@ export class Agent {
 
   getConversationId(): string | null {
     return this.clerk.getConversationId();
+  }
+
+  setResetSession(fn: () => Promise<void>): void {
+    this.receptionist.setResetSession(fn);
   }
 
   setOnToolActivity(cb: OnToolActivity): void {

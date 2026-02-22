@@ -1,16 +1,26 @@
 import React, { useState, useRef } from "react";
 import { Box, Text, useInput, useStdout, useApp } from "ink";
 import TextInput from "ink-text-input";
-import { commands, filterCommands } from "./commands.js";
+
+interface SlashCommand {
+  name: string;
+  description: string;
+}
+
+function filterCommands(commands: SlashCommand[], query: string): SlashCommand[] {
+  const q = query.toLowerCase();
+  return commands.filter((cmd) => cmd.name.startsWith(q));
+}
 
 interface Props {
   onSubmit: (text: string) => void;
   disabled: boolean;
   approvalMode?: boolean;
   onApproval?: (approved: boolean) => void;
+  commands?: SlashCommand[];
 }
 
-export default function InputBar({ onSubmit, disabled, approvalMode, onApproval }: Props) {
+export default function InputBar({ onSubmit, disabled, approvalMode, onApproval, commands = [] }: Props) {
   const { exit } = useApp();
   const [value, setValue] = useState("");
   const historyRef = useRef<string[]>([]);
@@ -22,7 +32,7 @@ export default function InputBar({ onSubmit, disabled, approvalMode, onApproval 
   const width = stdout?.columns ?? 80;
   const line = "─".repeat(width);
 
-  const filtered = menuOpen ? filterCommands(value.slice(1)) : [];
+  const filtered = menuOpen ? filterCommands(commands, value.slice(1)) : [];
 
   const handleChange = (newValue: string) => {
     setValue(newValue);

@@ -7,25 +7,16 @@ import ToolPanel from "./ToolPanel.js";
 import InputBar from "./InputBar.js";
 import StatusBar from "./StatusBar.js";
 import type { Agent } from "../core/agent.js";
-import type {
-  ChatEntry,
-  ToolActivity,
-  ToolApprovalRequest,
-} from "../types.js";
-import { formatToolArgs } from "../tools/index.js";
-
-function atLeast<T>(ms: number, promise: Promise<T>): Promise<T> {
-  return Promise.all([promise, new Promise<void>((r) => setTimeout(r, ms))]).then(([v]) => v);
-}
+import type { ChatEntry, ToolActivity, ToolApprovalRequest } from "../core/agent.js";
+import { formatToolArgs } from "../core/agent.js";
 
 interface Props {
   agent: Agent;
   model: string;
-  resetSession: () => Promise<void>;
   displayFromIndex: number;
 }
 
-export default function App({ agent, model, resetSession, displayFromIndex }: Props) {
+export default function App({ agent, model, displayFromIndex }: Props) {
   const { exit } = useApp();
   const [entries, setEntries] = useState<ChatEntry[]>(agent.getEntries());
   const displayFrom = useRef(displayFromIndex);
@@ -33,12 +24,43 @@ export default function App({ agent, model, resetSession, displayFromIndex }: Pr
   const [toolActivity, setToolActivity] = useState<ToolActivity | null>(null);
   const [pendingApproval, setPendingApproval] =
     useState<ToolApprovalRequest | null>(null);
+
   useEffect(() => {
     agent.setOnToolActivity(setToolActivity);
     agent.setOnToolApproval(setPendingApproval);
     agent.vitals.startHpRefresh();
-    return () => agent.vitals.stopHpRefresh();
-  }, [agent]);
+
+    const r = agent.receptionist;
+    r.on("quit", () => exit());
+    r.on("rest:before", () => {
+      displayFrom.current = 0;
+      setEntries([{ message: { role: "assistant", content: "(｡-ω-)zzZ Resting..." }, emotion: "neutral" }]);
+    });
+    r.on("rest:after", () => setEntries([...agent.getEntries()]));
+    r.on("chat:before", (text) => {
+      setEntries([...agent.getEntries(), { message: { role: "user", content: text } }]);
+      setLoading(true);
+      setToolActivity(null);
+    });
+    r.on("chat:after", () => {
+      setEntries([...agent.getEntries()]);
+      setLoading(false);
+      setToolActivity(null);
+    });
+    r.on("chat:error", (errMsg) => {
+      setEntries((prev) => [
+        ...prev,
+        { message: { role: "assistant", content: `Error: ${errMsg}` } },
+      ]);
+      setLoading(false);
+      setToolActivity(null);
+    });
+
+    return () => {
+      r.removeAllListeners();
+      agent.vitals.stopHpRefresh();
+    };
+  }, [agent, exit]);
 
   const handleApproval = useCallback(
     (approved: boolean) => {
@@ -51,42 +73,8 @@ export default function App({ agent, model, resetSession, displayFromIndex }: Pr
   );
 
   const handleSubmit = useCallback(
-    async (text: string) => {
-      if (text === "/quit") {
-        exit();
-        return;
-      }
-
-      if (text === "/rest") {
-        displayFrom.current = 0;
-        setEntries([{ message: { role: "assistant", content: "(｡-ω-)zzZ Resting..." }, emotion: "neutral" }]);
-        await atLeast(1500, resetSession());
-        setEntries([...agent.getEntries()]);
-        return;
-      }
-
-      setEntries([
-        ...agent.getEntries(),
-        { message: { role: "user", content: text } },
-      ]);
-      setLoading(true);
-      setToolActivity(null);
-
-      try {
-        await agent.run(text);
-        setEntries([...agent.getEntries()]);
-      } catch (err: unknown) {
-        const errMsg = err instanceof Error ? err.message : "Unknown error";
-        setEntries((prev) => [
-          ...prev,
-          { message: { role: "assistant", content: `Error: ${errMsg}` } },
-        ]);
-      } finally {
-        setLoading(false);
-        setToolActivity(null);
-      }
-    },
-    [agent, exit, resetSession],
+    (text: string) => { agent.receptionist.handle(text); },
+    [agent],
   );
 
   return (
@@ -133,7 +121,7 @@ export default function App({ agent, model, resetSession, displayFromIndex }: Pr
           onApproval={handleApproval}
         />
       ) : (
-        <InputBar onSubmit={handleSubmit} disabled={loading} />
+        <InputBar onSubmit={handleSubmit} disabled={loading} commands={agent.receptionist.commands} />
       )}
       <StatusBar vitals={agent.vitals} model={model} />
     </Box>

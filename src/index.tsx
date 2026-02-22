@@ -129,8 +129,10 @@ async function resetSession(): Promise<void> {
   }
 }
 
+agent.setResetSession(resetSession);
+
 const instance = render(
-  <App agent={agent} model={model} resetSession={resetSession} displayFromIndex={displayFromIndex} />,
+  <App agent={agent} model={model} displayFromIndex={displayFromIndex} />,
   { exitOnCtrlC: false },
 );
 

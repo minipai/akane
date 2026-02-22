@@ -1,5 +1,5 @@
 import type { ChatCompletionTool } from "openai/resources/chat/completions";
-import type OpenAI from "openai";
+import type { ChatClient } from "../types.js";
 import {
   CATEGORIES,
   insertFact,
@@ -85,10 +85,10 @@ export const updateUserFactToolDef: ChatCompletionTool = {
 };
 
 // Store client/model reference for regenerateProfile calls
-let _client: OpenAI | null = null;
+let _client: ChatClient | null = null;
 let _model: string = "";
 
-export function setUserFactsContext(client: OpenAI, model: string): void {
+export function setUserFactsContext(client: ChatClient, model: string): void {
   _client = client;
   _model = model;
 }

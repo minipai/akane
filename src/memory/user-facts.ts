@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import type OpenAI from "openai";
+import type { ChatClient } from "../types.js";
 import { getDb } from "./db.js";
 import { userFacts, userProfile } from "./schema.js";
 import { getKv, setKv } from "./kv.js";
@@ -104,7 +104,7 @@ export const CATEGORY_LABELS: Record<Category, string> = {
 };
 
 export async function regenerateProfile(
-  client: OpenAI,
+  client: ChatClient,
   model: string,
   category: Category,
 ): Promise<void> {
@@ -147,7 +147,7 @@ const SUBTOPICS: Record<Category, string[]> = {
 };
 
 export async function generateNextQuestion(
-  client: OpenAI,
+  client: ChatClient,
   model: string,
 ): Promise<void> {
   // Pick a random category and subtopic

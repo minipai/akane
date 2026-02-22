@@ -1,8 +1,8 @@
 import React from "react";
 import { render } from "ink";
-import config from "./config.js";
-import { createClient } from "./client.js";
-import { Agent } from "./agent.js";
+import config from "./core/config.js";
+import { createClient } from "./core/client.js";
+import { Agent } from "./core/agent.js";
 import { buildSystemPrompt } from "./prompts/index.js";
 import type { MemoryContext } from "./prompts/index.js";
 import {
@@ -19,7 +19,6 @@ import {
 import { getAllProfiles, generateNextQuestion } from "./memory/user-facts.js";
 import { setUserFactsContext } from "./tools/index.js";
 import { getKv } from "./memory/kv.js";
-import { MP_DISPLAY_MAX } from "./components/StatusBar.js";
 import App from "./components/App.js";
 
 // Initialize memory and load previous summaries
@@ -53,7 +52,6 @@ function buildMemory(): MemoryContext {
 
 const systemPrompt = buildSystemPrompt(buildMemory());
 const agent = new Agent(client, model, systemPrompt);
-agent.setMpMax(MP_DISPLAY_MAX);
 
 // Resume active session or create a new one
 let displayFromIndex = 0;
@@ -132,7 +130,7 @@ async function resetSession(): Promise<void> {
 }
 
 const instance = render(
-  <App agent={agent} model={model} contextLimit={config.contextLimit} resetSession={resetSession} displayFromIndex={displayFromIndex} />,
+  <App agent={agent} model={model} resetSession={resetSession} displayFromIndex={displayFromIndex} />,
   { exitOnCtrlC: false },
 );
 

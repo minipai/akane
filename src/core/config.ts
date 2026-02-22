@@ -1,5 +1,5 @@
 import "dotenv/config";
-import type { Config } from "./types.js";
+import type { Config } from "../types.js";
 
 const config: Config = {
   apiKey: process.env.OPENAI_API_KEY ?? "",

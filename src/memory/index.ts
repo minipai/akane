@@ -4,7 +4,7 @@ import { getDb } from "./db.js";
 import { conversations, messages } from "./schema.js";
 import { getKv, getKvUpdatedAt, setKv } from "./kv.js";
 import type { ChatEntry, Message } from "../types.js";
-import type OpenAI from "openai";
+import type { ChatClient } from "../types.js";
 
 export function initMemory(): void {
   getDb(); // ensures DB + tables exist
@@ -108,7 +108,7 @@ export function getRecentConversationSummary(): string | null {
 }
 
 export async function updateRecentConversationSummary(
-  client: OpenAI,
+  client: ChatClient,
   model: string,
   newSummary: string,
 ): Promise<void> {

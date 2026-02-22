@@ -1,5 +1,14 @@
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 
+/** Minimal interface for the OpenAI chat client — easy to mock in tests. */
+export interface ChatClient {
+  chat: {
+    completions: {
+      create(params: any): Promise<any>;
+    };
+  };
+}
+
 export type Message = ChatCompletionMessageParam;
 
 export interface ChatEntry {
@@ -11,11 +20,6 @@ export interface ToolActivity {
   name: string;
   args: string;
   result: string | null;
-}
-
-export interface TokenUsage {
-  promptTokens: number;
-  totalTokens: number;
 }
 
 export interface ToolApprovalRequest {

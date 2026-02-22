@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { Box, Text, useInput, useStdout, useApp } from "ink";
 import TextInput from "ink-text-input";
-import { commands, filterCommands } from "../commands.js";
+import { commands, filterCommands } from "./commands.js";
 
 interface Props {
   onSubmit: (text: string) => void;

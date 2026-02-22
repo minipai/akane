@@ -1,7 +1,7 @@
 import OpenAI from "openai";
-import type { Config } from "./types.js";
+import type { ChatClient, Config } from "../types.js";
 
-export function createClient(config: Config) {
+export function createClient(config: Config): { client: ChatClient; model: string } {
   const client = new OpenAI({
     apiKey: config.apiKey,
     baseURL: config.baseUrl,

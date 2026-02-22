@@ -5,14 +5,12 @@ import Banner from "./Banner.js";
 import MessageList from "./MessageList.js";
 import ToolPanel from "./ToolPanel.js";
 import InputBar from "./InputBar.js";
-import StatusBar, { HP_DAILY_BUDGET } from "./StatusBar.js";
-import { getDailySpend, getCachedDailyCost } from "../memory/costs.js";
-import type { Agent } from "../agent.js";
+import StatusBar from "./StatusBar.js";
+import type { Agent } from "../core/agent.js";
 import type {
   ChatEntry,
   ToolActivity,
   ToolApprovalRequest,
-  TokenUsage,
 } from "../types.js";
 import { formatToolArgs } from "../tools/index.js";
 
@@ -23,39 +21,24 @@ function atLeast<T>(ms: number, promise: Promise<T>): Promise<T> {
 interface Props {
   agent: Agent;
   model: string;
-  contextLimit: number;
   resetSession: () => Promise<void>;
   displayFromIndex: number;
 }
 
-export default function App({ agent, model, contextLimit, resetSession, displayFromIndex }: Props) {
+export default function App({ agent, model, resetSession, displayFromIndex }: Props) {
   const { exit } = useApp();
   const [entries, setEntries] = useState<ChatEntry[]>(agent.getEntries());
   const displayFrom = useRef(displayFromIndex);
   const [loading, setLoading] = useState(false);
   const [toolActivity, setToolActivity] = useState<ToolActivity | null>(null);
-  const [tokenUsage, setTokenUsage] = useState<TokenUsage>(agent.getTokenUsage());
   const [pendingApproval, setPendingApproval] =
     useState<ToolApprovalRequest | null>(null);
-  const [dailyCost, setDailyCost] = useState(getCachedDailyCost());
-
-  const refreshHp = useCallback(() => {
-    getDailySpend().then((cost) => {
-      setDailyCost(cost);
-      agent.setHpRatio(Math.max(0, Math.min(1, (HP_DAILY_BUDGET - cost) / HP_DAILY_BUDGET)));
-    }).catch(() => {});
-  }, [agent]);
-
   useEffect(() => {
     agent.setOnToolActivity(setToolActivity);
     agent.setOnToolApproval(setPendingApproval);
-    // Set HP from cache immediately, then refresh from API on a 5-min interval
-    const cached = getCachedDailyCost();
-    agent.setHpRatio(Math.max(0, Math.min(1, (HP_DAILY_BUDGET - cached) / HP_DAILY_BUDGET)));
-    refreshHp();
-    const interval = setInterval(refreshHp, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [agent, refreshHp]);
+    agent.vitals.startHpRefresh();
+    return () => agent.vitals.stopHpRefresh();
+  }, [agent]);
 
   const handleApproval = useCallback(
     (approved: boolean) => {
@@ -77,7 +60,6 @@ export default function App({ agent, model, contextLimit, resetSession, displayF
       if (text === "/rest") {
         displayFrom.current = 0;
         setEntries([{ message: { role: "assistant", content: "(｡-ω-)zzZ Resting..." }, emotion: "neutral" }]);
-        setTokenUsage({ promptTokens: 0, totalTokens: 0 });
         await atLeast(1500, resetSession());
         setEntries([...agent.getEntries()]);
         return;
@@ -93,7 +75,6 @@ export default function App({ agent, model, contextLimit, resetSession, displayF
       try {
         await agent.run(text);
         setEntries([...agent.getEntries()]);
-        setTokenUsage(agent.getTokenUsage());
       } catch (err: unknown) {
         const errMsg = err instanceof Error ? err.message : "Unknown error";
         setEntries((prev) => [
@@ -154,7 +135,7 @@ export default function App({ agent, model, contextLimit, resetSession, displayF
       ) : (
         <InputBar onSubmit={handleSubmit} disabled={loading} />
       )}
-      <StatusBar usage={tokenUsage} contextLimit={contextLimit} model={model} dailyCost={dailyCost} />
+      <StatusBar vitals={agent.vitals} model={model} />
     </Box>
   );
 }

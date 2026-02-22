@@ -1,4 +1,4 @@
-import type OpenAI from "openai";
+import type { ChatClient } from "../types.js";
 import { and, eq, gte, lt, desc, isNotNull } from "drizzle-orm";
 import { getDb } from "./db.js";
 import { diary, conversations } from "./schema.js";
@@ -6,7 +6,7 @@ import { diary, conversations } from "./schema.js";
 type DiaryType = "daily" | "weekly" | "monthly" | "quarterly" | "yearly";
 
 async function summarizeTexts(
-  client: OpenAI,
+  client: ChatClient,
   model: string,
   texts: string[],
   instruction: string,
@@ -152,7 +152,7 @@ function weeksInMonth(monthStr: string): string[] {
 
 // --- Generation per level ---
 
-async function generateDaily(client: OpenAI, model: string): Promise<void> {
+async function generateDaily(client: ChatClient, model: string): Promise<void> {
   const date = yesterday();
 
   if (diaryExists("daily", date)) return;
@@ -187,7 +187,7 @@ async function generateDaily(client: OpenAI, model: string): Promise<void> {
   if (text) insertDiary("daily", date, text);
 }
 
-async function generateWeekly(client: OpenAI, model: string): Promise<void> {
+async function generateWeekly(client: ChatClient, model: string): Promise<void> {
   const week = lastISOWeek();
   if (diaryExists("weekly", week)) return;
 
@@ -204,7 +204,7 @@ async function generateWeekly(client: OpenAI, model: string): Promise<void> {
   if (text) insertDiary("weekly", week, text);
 }
 
-async function generateMonthly(client: OpenAI, model: string): Promise<void> {
+async function generateMonthly(client: ChatClient, model: string): Promise<void> {
   const month = lastMonth();
   if (diaryExists("monthly", month)) return;
 
@@ -221,7 +221,7 @@ async function generateMonthly(client: OpenAI, model: string): Promise<void> {
   if (text) insertDiary("monthly", month, text);
 }
 
-async function generateQuarterly(client: OpenAI, model: string): Promise<void> {
+async function generateQuarterly(client: ChatClient, model: string): Promise<void> {
   const { key, months } = lastQuarter();
   if (diaryExists("quarterly", key)) return;
 
@@ -237,7 +237,7 @@ async function generateQuarterly(client: OpenAI, model: string): Promise<void> {
   if (text) insertDiary("quarterly", key, text);
 }
 
-async function generateYearly(client: OpenAI, model: string): Promise<void> {
+async function generateYearly(client: ChatClient, model: string): Promise<void> {
   const { key, quarters } = lastYear();
   if (diaryExists("yearly", key)) return;
 
@@ -255,7 +255,7 @@ async function generateYearly(client: OpenAI, model: string): Promise<void> {
 
 /** Run the full diary generation chain. Safe to fire-and-forget. */
 export async function generateDiary(
-  client: OpenAI,
+  client: ChatClient,
   model: string,
 ): Promise<void> {
   try {

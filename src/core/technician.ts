@@ -1,0 +1,85 @@
+import type { ToolActivity, ToolApprovalRequest } from "../types.js";
+import { executeTool, autoApprovedTools } from "../tools/index.js";
+
+export type OnToolActivity = (activity: ToolActivity) => void;
+export type OnToolApproval = (request: ToolApprovalRequest) => void;
+export type OnEmotionChange = (emotion: string) => void;
+
+interface ToolResult {
+  tool_call_id: string;
+  content: string;
+}
+
+export class Technician {
+  private onActivity?: OnToolActivity;
+  private onApproval?: OnToolApproval;
+  private onEmotionChange?: OnEmotionChange;
+
+  setOnActivity(cb: OnToolActivity): void {
+    this.onActivity = cb;
+  }
+
+  setOnApproval(cb: OnToolApproval): void {
+    this.onApproval = cb;
+  }
+
+  setOnEmotionChange(cb: OnEmotionChange): void {
+    this.onEmotionChange = cb;
+  }
+
+  async run(
+    toolCalls: Array<{ id: string; function: { name: string; arguments: string } }>,
+  ): Promise<{ results: ToolResult[]; emotion?: string }> {
+    const results: ToolResult[] = [];
+    let emotion: string | undefined;
+
+    for (const tc of toolCalls) {
+      const isAutoApproved = autoApprovedTools.has(tc.function.name);
+
+      if (!isAutoApproved) {
+        this.onActivity?.({
+          name: tc.function.name,
+          args: tc.function.arguments,
+          result: null,
+        });
+
+        const approved = this.onApproval
+          ? await new Promise<boolean>((resolve) => {
+              this.onApproval!({ name: tc.function.name, args: tc.function.arguments, resolve });
+            })
+          : true;
+
+        if (!approved) {
+          const denial = "Tool execution denied by user.";
+          this.onActivity?.({
+            name: tc.function.name,
+            args: tc.function.arguments,
+            result: denial,
+          });
+          results.push({ tool_call_id: tc.id, content: denial });
+          continue;
+        }
+      }
+
+      const result = await executeTool(tc.function.name, tc.function.arguments);
+
+      if (tc.function.name === "set_emotion") {
+        try {
+          const parsed = JSON.parse(tc.function.arguments);
+          emotion = parsed.emotion;
+          this.onEmotionChange?.(parsed.emotion);
+        } catch {}
+      } else {
+        this.onActivity?.({
+          name: tc.function.name,
+          args: tc.function.arguments,
+          result,
+        });
+      }
+
+      results.push({ tool_call_id: tc.id, content: result });
+    }
+
+    return { results, emotion };
+  }
+}

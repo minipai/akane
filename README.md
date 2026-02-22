@@ -1,32 +1,60 @@
 # K.A.N.A. — Kawaii And Nice Assistant ♡⸜(˶˃ ᵕ ˂˶)⸝♡
 
-AI chat agent with a TUI built on Ink (React for CLI).
+A personal AI chat companion that lives in your terminal. Built with [Ink](https://github.com/vadimdemedes/ink) (React for CLI) and powered by OpenAI.
+
+Kana remembers your conversations, learns about you over time, and expresses emotions through kaomoji. She keeps a diary, maintains a profile of things you've shared, and can run shell commands on your behalf.
+
+## Features
+
+- **Persistent memory** — conversations are stored in a local SQLite database and resumed across restarts
+- **Diary system** — hierarchical summaries (daily / weekly / monthly / quarterly / yearly) keep long-term context compact
+- **User profile** — Kana remembers facts about you across categories (identity, relations, career, preferences, mindset, timeline)
+- **Emotion system** — the AI picks emotions during conversation, displayed as kaomoji next to each message
+- **Shell tool** — Kana can run commands in your terminal (with your approval)
+- **HP bar** — optional daily API spend tracker ($1 budget) when `OPENAI_ADMIN_KEY` is set
+- **Session management** — `/rest` ends a session with a summary; `/quit` exits and leaves the session open for next time
 
 ## Setup
 
-```
+```sh
+git clone <repo-url> && cd kana
 npm install
-# create .env with your OPENAI_API_KEY
+```
+
+Create a `.env` file:
+
+```sh
+OPENAI_API_KEY=sk-...       # required
+```
+
+Then run:
+
+```sh
 npm run dev
 ```
 
-### Environment variables
+### Optional environment variables
 
 | Variable | Description | Default |
 |---|---|---|
-| `OPENAI_API_KEY` | OpenAI API key (required) | — |
+| `OPENAI_ADMIN_KEY` | Org-level admin key — enables the HP bar (daily spend tracker) | — |
 | `KANA_NAME` | Kana's display name | `かな` |
-| `USER_NAME` | Your name | `User` |
+| `USER_NAME` | Your real name | `User` |
 | `USER_NICKNAME` | How Kana addresses you | `ご主人様` |
+
+## Slash commands
+
+| Command | Description |
+|---|---|
+| `/rest` | End the current session (generates a summary) and start fresh |
+| `/quit` | Exit the app (session stays open for next launch) |
 
 ## Database
 
-Kana stores conversation history in a local SQLite database (`memory.db` in project root).
+Kana stores everything in a local SQLite file (`memory.db`, gitignored). Migrations run automatically on startup.
 
-Migrations run automatically on startup. If you change the schema in `src/memory/schema.ts`, generate a new migration:
-
-```
+```sh
 npm run db:generate   # generate migration from schema changes
-npm run db:migrate    # apply pending migrations manually
+npm run db:migrate    # apply pending migrations
 npm run db:studio     # browse the DB in Drizzle Studio
 ```

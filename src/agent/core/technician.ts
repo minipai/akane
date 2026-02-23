@@ -8,7 +8,7 @@ export type OnToolApproval = (request: ToolApprovalRequest) => void;
 export type OnEmotionChange = (emotion: string) => void;
 
 /** Tools that run silently (no activity panel shown). */
-const silentTools = new Set(["set_emotion", "describe_agent", "rest_session"]);
+const silentTools = new Set(["set_emotion", "describe_agent", "rest_session", "update_config"]);
 
 
 interface ToolResult {
@@ -29,8 +29,9 @@ export class Technician {
     addInfo: (info: InfoEntry) => void,
     onRest?: () => void,
     search: SearchClient | null = null,
+    refreshPrompt?: () => void,
   ) {
-    this.ctx = { memory, cache, compress, addInfo, onRest, search };
+    this.ctx = { memory, cache, compress, addInfo, onRest, search, refreshPrompt };
   }
 
   setOnActivity(cb: OnToolActivity): void {

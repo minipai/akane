@@ -33,6 +33,13 @@ function formatToolArgs(name: string, argsJson: string): string {
         return parsed.description ? parsed.description.slice(0, 60) + "…" : argsJson;
       case "rest_session":
         return parsed.description ? parsed.description.slice(0, 60) + "…" : argsJson;
+      case "update_config": {
+        const parts: string[] = [];
+        if (parsed.kana_name) parts.push(`kana_name=${parsed.kana_name}`);
+        if (parsed.user_name) parts.push(`user_name=${parsed.user_name}`);
+        if (parsed.user_nickname) parts.push(`user_nickname=${parsed.user_nickname}`);
+        return parts.join(", ") || argsJson;
+      }
       default:
         return argsJson;
     }

@@ -26,6 +26,7 @@ export function createDispatch(agent: {
   look(): Promise<string>;
   beginRest(): Promise<void>;
   changeOutfit(name: string): Promise<string>;
+  configure(): Promise<string>;
 }): Dispatch {
   const events = new EventEmitter<DispatchEvents>();
 
@@ -34,6 +35,7 @@ export function createDispatch(agent: {
     { name: "outfit", description: "Change outfit" },
     { name: "intro", description: "Ask Kana to introduce herself" },
     { name: "rest", description: "End session and start fresh" },
+    { name: "config", description: "View and change persona settings" },
     { name: "quit", description: "Exit the app" },
   ];
 
@@ -80,6 +82,16 @@ export function createDispatch(agent: {
         events.emit("chat:command");
         agent
           .look()
+          .then(() => events.emit("chat:after"))
+          .catch((err: unknown) => {
+            const msg = err instanceof Error ? err.message : "Unknown error";
+            events.emit("chat:error", msg);
+          });
+        return;
+      case "config":
+        events.emit("chat:command");
+        agent
+          .configure()
           .then(() => events.emit("chat:after"))
           .catch((err: unknown) => {
             const msg = err instanceof Error ? err.message : "Unknown error";

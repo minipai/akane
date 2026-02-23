@@ -11,13 +11,9 @@ pnpm dev           # runs tsx src/index.tsx
 Requires `OPENAI_API_KEY` in `.env` file. Uses `gpt-4.1-mini` by default (see `src/boot/config.ts`).
 Optional `OPENAI_ADMIN_KEY` (org-level admin key) enables the HP bar showing daily API spend vs $1 budget.
 
-### Persona env vars (in `.env`)
+### Persona config
 
-- `KANA_NAME` — Kana's display name (default placeholder: `{{KANA_NAME}}`)
-- `USER_NAME` — user's real name (default placeholder: `{{USER_NAME}}`)
-- `USER_NICKNAME` — how Kana addresses the user (default placeholder: `{{USER_NICKNAME}}`)
-
-These replace `{{…}}` placeholders in the prompt markdown files at runtime.
+Persona variables (`kana_name`, `user_name`, `user_nickname`) are stored in the `config` DB table and managed at runtime via the `/config` slash command. Defaults are centralized in `src/db/config.ts` (`DEFAULTS` map). `getConfigWithDefault()` reads from DB with built-in fallback. The `{{…}}` placeholders in prompt markdown files are replaced at runtime via `replaceVars()` in `src/agent/prompts/index.ts`.
 
 ## Architecture
 
@@ -48,10 +44,12 @@ src/
 │   ├── index.ts         # Tool registry, dispatcher, formatToolArgs
 │   ├── shell.ts         # Shell command execution tool
 │   ├── emotion.ts       # Emotion tool (set_emotion) — auto-approved, no user confirmation
+│   ├── config.ts        # Persona config tool (update_config) — auto-approved
 │   └── user-facts.ts    # User profile tools (note_about_user, get_user_facts, update_user_fact) — auto-approved
 ├── db/
 │   ├── db.ts            # SQLite connection (better-sqlite3 + drizzle), stored at data/memory.db
-│   ├── schema.ts        # Drizzle schema — conversations, messages, diary, user_facts, user_profile, kv
+│   ├── schema.ts        # Drizzle schema — conversations, messages, diary, user_facts, user_profile, config, kv
+│   ├── config.ts        # Persona config — getConfig, setConfig, getConfigWithDefault, getAllConfig
 │   └── kv.ts            # Simple key-value store
 ├── memory/
 │   ├── memory.ts        # Memory interface + SqliteMemory class — unified facade over long-term storage

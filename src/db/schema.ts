@@ -46,6 +46,12 @@ export const userProfile = sqliteTable("user_profile", {
   updatedAt: text("updated_at").notNull(),
 });
 
+export const config = sqliteTable("config", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
 export const kvStore = sqliteTable("kv_store", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),

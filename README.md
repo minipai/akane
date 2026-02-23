@@ -12,6 +12,7 @@ Kana remembers your conversations, learns about you over time, and expresses emo
 - **Emotion system** — the AI picks emotions during conversation, displayed as kaomoji next to each message
 - **Shell tool** — Kana can run commands in your terminal (with your approval)
 - **HP bar** — optional daily API spend tracker ($1 budget) when `OPENAI_ADMIN_KEY` is set
+- **Persona config** — `/config` lets you view and change display names at runtime (stored in DB)
 - **Session management** — `/rest` ends a session with a summary; `/quit` exits and leaves the session open for next time
 
 ## Setup
@@ -38,14 +39,12 @@ pnpm dev
 | Variable | Description | Default |
 |---|---|---|
 | `OPENAI_ADMIN_KEY` | Org-level admin key — enables the HP bar (daily spend tracker) | — |
-| `KANA_NAME` | Kana's display name | `かな` |
-| `USER_NAME` | Your real name | `User` |
-| `USER_NICKNAME` | How Kana addresses you | `ご主人様` |
 
 ## Slash commands
 
 | Command | Description |
 |---|---|
+| `/config` | View and change persona settings (names, nickname) |
 | `/rest` | End the current session (generates a summary) and start fresh |
 | `/quit` | Exit the app (session stays open for next launch) |
 

@@ -3,6 +3,7 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { outfits, DEFAULT_OUTFIT } from "./outfits.js";
 import { getKv } from "../../db/kv.js";
+import { getConfigWithDefault } from "../../db/config.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -12,9 +13,9 @@ function readPromptFile(filename: string): string {
 
 function replaceVars(text: string): string {
   const vars: Record<string, string | undefined> = {
-    "{{KANA_NAME}}": process.env.KANA_NAME || "かな",
-    "{{USER_NAME}}": process.env.USER_NAME || "User",
-    "{{USER_NICKNAME}}": process.env.USER_NICKNAME || "ご主人様",
+    "{{KANA_NAME}}": getConfigWithDefault("kana_name"),
+    "{{USER_NAME}}": getConfigWithDefault("user_name"),
+    "{{USER_NICKNAME}}": getConfigWithDefault("user_nickname"),
   };
   let result = text;
   for (const [placeholder, value] of Object.entries(vars)) {

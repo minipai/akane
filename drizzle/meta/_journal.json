@@ -36,6 +36,13 @@
       "when": 1771816216518,
       "tag": "0004_mighty_ego",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1771853913747,
+      "tag": "0005_quick_roulette",
+      "breakpoints": true
     }
   ]
 }

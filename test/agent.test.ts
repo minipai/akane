@@ -6,12 +6,23 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { isNull, desc, eq } from "drizzle-orm";
 import * as schema from "../src/db/schema.js";
-import { conversations, messages } from "../src/db/schema.js";
+import { conversations, messages, config as configTable } from "../src/db/schema.js";
 import type { Db } from "../src/db/db.js";
 import type { ChatClient, ChatEntry } from "../src/types.js";
 import type { Cache } from "../src/boot/cache.js";
 import type { SearchClient } from "../src/boot/search.js";
 import { Agent } from "../src/agent/agent.js";
+import { getConfig, setConfig, getAllConfig, getConfigWithDefault } from "../src/db/config.js";
+
+// Mock getDb so config module uses the test DB
+let testDb: Db;
+vi.mock("../src/db/db.js", async (importOriginal) => {
+  const orig = await importOriginal<typeof import("../src/db/db.js")>();
+  return {
+    ...orig,
+    getDb: () => testDb,
+  };
+});
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = join(__dirname, "..", "drizzle");
@@ -80,6 +91,7 @@ describe("Agent", () => {
 
   beforeEach(() => {
     db = createTestDb();
+    testDb = db;
     cache = createMockCache();
     client = {
       chat: vi.fn(),
@@ -642,6 +654,157 @@ describe("Agent", () => {
         (e: any) => e.message?.role === "assistant" && e.message.content,
       );
       expect(assistantEntries.some((e: any) => e.message.content === "Sweet dreams!")).toBe(true);
+    });
+  });
+
+  // ─── Config DB layer ────────────────────────────────────────────
+
+  describe("config DB layer", () => {
+    it("getConfig returns null for missing key", () => {
+      expect(getConfig("nonexistent")).toBeNull();
+    });
+
+    it("setConfig + getConfig round-trips a value", () => {
+      setConfig("kana_name", "テスト");
+      expect(getConfig("kana_name")).toBe("テスト");
+    });
+
+    it("setConfig upserts existing key", () => {
+      setConfig("kana_name", "first");
+      setConfig("kana_name", "second");
+      expect(getConfig("kana_name")).toBe("second");
+    });
+
+    it("getAllConfig returns all stored values", () => {
+      setConfig("kana_name", "かな");
+      setConfig("user_name", "Art");
+      setConfig("user_nickname", "あーちゃん");
+      const all = getAllConfig();
+      expect(all).toEqual({
+        kana_name: "かな",
+        user_name: "Art",
+        user_nickname: "あーちゃん",
+      });
+    });
+
+    it("getAllConfig returns empty object when no rows", () => {
+      expect(getAllConfig()).toEqual({});
+    });
+
+    it("getConfigWithDefault returns built-in default when unset", () => {
+      expect(getConfigWithDefault("kana_name")).toBe("かな");
+      expect(getConfigWithDefault("user_name")).toBe("User");
+      expect(getConfigWithDefault("user_nickname")).toBe("ご主人様");
+    });
+
+    it("getConfigWithDefault returns DB value over default", () => {
+      setConfig("kana_name", "Miku");
+      expect(getConfigWithDefault("kana_name")).toBe("Miku");
+    });
+  });
+
+  // ─── update_config tool ──────────────────────────────────────────
+
+  describe("update_config tool", () => {
+    it("update_config is auto-approved", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      const approvalCb = vi.fn();
+      agent.setOnToolApproval(approvalCb);
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc1", name: "update_config", args: '{"kana_name":"Miku"}' },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("Updated!"));
+
+      await agent.run("change name");
+      expect(approvalCb).not.toHaveBeenCalled();
+    });
+
+    it("update_config persists values to DB", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            {
+              id: "tc1",
+              name: "update_config",
+              args: '{"kana_name":"Miku","user_nickname":"マスター"}',
+            },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("Done!"));
+
+      await agent.run("change config");
+
+      expect(getConfig("kana_name")).toBe("Miku");
+      expect(getConfig("user_nickname")).toBe("マスター");
+    });
+
+    it("update_config with null values are ignored", async () => {
+      setConfig("kana_name", "Original");
+      const agent = makeAgent();
+      agent.start();
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc1", name: "update_config", args: '{"kana_name":null,"user_name":"Art"}' },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("Done!"));
+
+      await agent.run("update");
+
+      expect(getConfig("kana_name")).toBe("Original");
+      expect(getConfig("user_name")).toBe("Art");
+    });
+  });
+
+  // ─── configure() command ─────────────────────────────────────────
+
+  describe("configure() command", () => {
+    it("configure() sends current config values in the prompt", async () => {
+      setConfig("kana_name", "かな");
+      setConfig("user_name", "Art");
+      setConfig("user_nickname", "あーちゃん");
+
+      const agent = makeAgent();
+      agent.start();
+
+      vi.mocked(client.chat).mockResolvedValueOnce(textResponse("Here are your settings!"));
+
+      await agent.configure();
+
+      const callArgs = vi.mocked(client.chat).mock.calls[0][0];
+      const userMsgs = callArgs.messages.filter((m: any) => m.role === "user");
+      const configMsg = userMsgs.find(
+        (m: any) =>
+          m.content.includes("kana_name") &&
+          m.content.includes("かな") &&
+          m.content.includes("Art") &&
+          m.content.includes("あーちゃん"),
+      );
+      expect(configMsg).toBeTruthy();
+    });
+
+    it("configure() carries /config label", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      vi.mocked(client.chat).mockResolvedValueOnce(textResponse("Settings!"));
+
+      await agent.configure();
+
+      const entries = agent.getEntries();
+      const labeled = entries.find((e: any) => e.label?.includes("/config"));
+      expect(labeled).toBeTruthy();
     });
   });
 

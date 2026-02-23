@@ -2,6 +2,7 @@ import React from "react";
 import { Box, Text } from "ink";
 import type { ChatEntry, Entry, InfoEntry } from "../types.js";
 import { isInfo } from "../types.js";
+import { getConfigWithDefault } from "../db/config.js";
 
 const EMOTION_EMOJI: Record<string, string> = {
   neutral: "•ᴗ•",
@@ -73,7 +74,7 @@ export default function MessageList({ entries }: Props) {
           <Box key={i} marginBottom={0}>
             <Box flexShrink={0}>
               <Text color={isAssistant ? "#ff77ff" : "green"} bold>
-                {isAssistant ? "Kana" : process.env.USER_NAME || "You"}{" "}
+                {isAssistant ? getConfigWithDefault("kana_name") : getConfigWithDefault("user_name")}{" "}
               </Text>
               {isAssistant && emoji && <Text color="#ff77ff">{emoji} </Text>}
               <Text color={isAssistant ? "#ff77ff" : "green"} bold>

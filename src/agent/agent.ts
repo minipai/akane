@@ -8,6 +8,7 @@ import { tools } from "./tools/index.js";
 import type { SearchClient } from "../boot/search.js";
 import { buildSystemPrompt } from "./prompts/index.js";
 import { setKv } from "../db/kv.js";
+import { getConfig } from "../db/config.js";
 import { generateNextQuestion } from "./tools/user-facts.js";
 import { Scribe } from "./core/scribe.js";
 import { Vitals } from "./core/vitals.js";
@@ -40,6 +41,7 @@ export class Agent {
       this.addInfo.bind(this),
       () => this.vitals.setTotalTokens(0),
       search,
+      () => this.refreshPrompt(),
     );
     this.secretary = new Secretary(this.memory, cache, client.compress.bind(client));
   }
@@ -128,6 +130,15 @@ export class Agent {
       { label: "/rest  End session and start fresh" },
     );
     await this.rest();
+  }
+
+  /** Show current persona config and let the user change values. */
+  configure(): Promise<string> {
+    const fmt = (key: string) => getConfig(key) ?? "(unset)";
+    return this.run(
+      `The user wants to view/change persona settings. Current values:\n- kana_name: ${fmt("kana_name")}\n- user_name: ${fmt("user_name")}\n- user_nickname: ${fmt("user_nickname")}\n\nShow them these current values. Values marked (unset) have not been configured yet — tell the user they are not set. Ask what they'd like to change. If they want to change something, call update_config with the new values. Use the conversation language.`,
+      { label: "/config  View and change persona settings" },
+    );
   }
 
   /** Change outfit: persist to KV, refresh prompt, and react. */

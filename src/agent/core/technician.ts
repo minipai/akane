@@ -1,6 +1,7 @@
 import type { ToolActivity, ToolApprovalRequest, InfoEntry } from "../../types.js";
 import { executeTool, autoApprovedTools, terminalTools } from "../tools/index.js";
 import type { ToolContext } from "../tools/index.js";
+import type { SearchClient } from "../../boot/search.js";
 
 export type OnToolActivity = (activity: ToolActivity) => void;
 export type OnToolApproval = (request: ToolApprovalRequest) => void;
@@ -27,8 +28,9 @@ export class Technician {
     compress: ToolContext["compress"],
     addInfo: (info: InfoEntry) => void,
     onRest?: () => void,
+    search: SearchClient | null = null,
   ) {
-    this.ctx = { memory, cache, compress, addInfo, onRest };
+    this.ctx = { memory, cache, compress, addInfo, onRest, search };
   }
 
   setOnActivity(cb: OnToolActivity): void {

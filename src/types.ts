@@ -55,4 +55,5 @@ export interface Config {
   baseUrl: string;
   model: string;
   contextLimit: number;
+  tavilyApiKey: string;
 }

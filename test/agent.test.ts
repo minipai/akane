@@ -10,6 +10,7 @@ import { conversations, messages } from "../src/db/schema.js";
 import type { Db } from "../src/db/db.js";
 import type { ChatClient, ChatEntry } from "../src/types.js";
 import type { Cache } from "../src/boot/cache.js";
+import type { SearchClient } from "../src/boot/search.js";
 import { Agent } from "../src/agent/agent.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -641,6 +642,131 @@ describe("Agent", () => {
         (e: any) => e.message?.role === "assistant" && e.message.content,
       );
       expect(assistantEntries.some((e: any) => e.message.content === "Sweet dreams!")).toBe(true);
+    });
+  });
+
+  // ─── Web search tool ──────────────────────────────────────────
+
+  describe("web search tool", () => {
+    it("web_search calls injected SearchClient and feeds result to LLM", async () => {
+      const search: SearchClient = vi.fn().mockResolvedValue({
+        answer: "TypeScript is a typed superset of JavaScript.",
+        results: [
+          { title: "TS Docs", url: "https://typescriptlang.org", content: "Official docs" },
+        ],
+      });
+      const agent = new Agent(client, db, cache, search);
+      agent.start();
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc1", name: "web_search", args: '{"query":"what is typescript"}' },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("TypeScript is a typed superset of JS!"));
+
+      const result = await agent.run("what is typescript?");
+
+      expect(search).toHaveBeenCalledWith("what is typescript");
+      expect(result).toBe("TypeScript is a typed superset of JS!");
+      // Two LLM calls: tool call + follow-up with result
+      expect(client.chat).toHaveBeenCalledTimes(2);
+
+      // Tool result should be in the message history
+      const msgs = agent.getMessages();
+      const toolMsg = msgs.find(
+        (m: any) => m.role === "tool" && typeof m.content === "string" && m.content.includes("TypeScript is a typed superset"),
+      );
+      expect(toolMsg).toBeTruthy();
+    });
+
+    it("web_search is auto-approved (no approval callback)", async () => {
+      const search: SearchClient = vi.fn().mockResolvedValue({ results: [] });
+      const agent = new Agent(client, db, cache, search);
+      agent.start();
+
+      const approvalCb = vi.fn();
+      agent.setOnToolApproval(approvalCb);
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc1", name: "web_search", args: '{"query":"test"}' },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("No results found."));
+
+      await agent.run("search test");
+      expect(approvalCb).not.toHaveBeenCalled();
+    });
+
+    it("web_search without SearchClient returns not-configured message", async () => {
+      const agent = new Agent(client, db, cache); // no search client
+      agent.start();
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc1", name: "web_search", args: '{"query":"test"}' },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("Sorry, search is not available."));
+
+      await agent.run("search something");
+
+      const msgs = agent.getMessages();
+      const toolMsg = msgs.find(
+        (m: any) => m.role === "tool" && typeof m.content === "string" && m.content.includes("not configured"),
+      );
+      expect(toolMsg).toBeTruthy();
+    });
+
+    it("web_search handles SearchClient errors gracefully", async () => {
+      const search: SearchClient = vi.fn().mockRejectedValue(new Error("network timeout"));
+      const agent = new Agent(client, db, cache, search);
+      agent.start();
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc1", name: "web_search", args: '{"query":"test"}' },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("Search failed, sorry."));
+
+      const result = await agent.run("search test");
+      expect(result).toBe("Search failed, sorry.");
+
+      const msgs = agent.getMessages();
+      const toolMsg = msgs.find(
+        (m: any) => m.role === "tool" && typeof m.content === "string" && m.content.includes("network timeout"),
+      );
+      expect(toolMsg).toBeTruthy();
+    });
+
+    it("web_search shows activity in tool panel", async () => {
+      const search: SearchClient = vi.fn().mockResolvedValue({
+        answer: "Result",
+        results: [],
+      });
+      const agent = new Agent(client, db, cache, search);
+      agent.start();
+
+      const activityLog: any[] = [];
+      agent.setOnToolActivity((a) => activityLog.push(a));
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc1", name: "web_search", args: '{"query":"test"}' },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("Here you go."));
+
+      await agent.run("search test");
+
+      expect(activityLog.some((a) => a.name === "web_search" && a.result !== null)).toBe(true);
     });
   });
 });

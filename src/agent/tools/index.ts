@@ -13,6 +13,8 @@ import {
 } from "./user-facts.js";
 import { describeAgentToolDef, executeDescribeAgent } from "./describe.js";
 import { restSessionToolDef, executeRestSession } from "./rest.js";
+import { searchToolDef, executeSearch } from "./search.js";
+import type { SearchClient } from "../../boot/search.js";
 
 export interface ToolContext {
   memory: Memory;
@@ -20,6 +22,7 @@ export interface ToolContext {
   compress: Compressor;
   addInfo: (info: InfoEntry) => void;
   onRest?: () => void;
+  search: SearchClient | null;
 }
 
 export const tools = [
@@ -30,6 +33,7 @@ export const tools = [
   updateUserFactToolDef,
   describeAgentToolDef,
   restSessionToolDef,
+  searchToolDef,
 ];
 
 /** Tools that don't need a follow-up LLM call — their output is the final response. */
@@ -43,6 +47,7 @@ export const autoApprovedTools = new Set([
   "update_user_fact",
   "describe_agent",
   "rest_session",
+  "web_search",
 ]);
 
 export async function executeTool(
@@ -68,6 +73,8 @@ export async function executeTool(
     case "rest_session":
       ctx.onRest?.();
       return executeRestSession(parsed.description, ctx.addInfo);
+    case "web_search":
+      return executeSearch(parsed.query, ctx.search);
     default:
       return `Unknown tool: ${name}`;
   }

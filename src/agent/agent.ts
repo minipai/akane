@@ -5,6 +5,7 @@ import type { Db } from "../db/db.js";
 import { Memory } from "./memory/memory.js";
 import type { Cache } from "../boot/cache.js";
 import { tools } from "./tools/index.js";
+import type { SearchClient } from "../boot/search.js";
 import { buildSystemPrompt } from "./prompts/index.js";
 import { setKv } from "../db/kv.js";
 import { generateNextQuestion } from "./tools/user-facts.js";
@@ -27,7 +28,7 @@ export class Agent {
   private secretary: Secretary;
   private isFirstUserMessage = true;
 
-  constructor(client: ChatClient, db: Db, cache: Cache) {
+  constructor(client: ChatClient, db: Db, cache: Cache, search: SearchClient | null = null) {
     this.client = client;
     this.memory = new Memory(db, client.compress.bind(client));
     this.cache = cache;
@@ -38,6 +39,7 @@ export class Agent {
       this.memory, cache, client.compress.bind(client),
       this.addInfo.bind(this),
       () => this.vitals.setTotalTokens(0),
+      search,
     );
     this.secretary = new Secretary(this.memory, cache, client.compress.bind(client));
   }

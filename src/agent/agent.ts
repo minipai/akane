@@ -171,13 +171,13 @@ export class Agent {
       const message = await this.callLLM();
       if (!message) return "(no response)";
 
+      this.scribe.addMessage(message);
+
       const calls = message.tool_calls?.filter((tc) => tc.type === "function");
       if (!calls || calls.length === 0) {
-        this.scribe.addMessage(message);
         return message.content ?? "(no response)";
       }
 
-      this.scribe.addMessage(message);
       const { results, emotion, terminal } = await this.technician.run(calls);
 
       if (emotion) this.scribe.setEmotion(emotion);

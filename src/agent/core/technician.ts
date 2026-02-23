@@ -48,12 +48,12 @@ export class Technician {
   ): Promise<{ results: ToolResult[]; emotion?: string; terminal: boolean }> {
     const results: ToolResult[] = [];
     let emotion: string | undefined;
-    let allTerminal = true;
+    let anyTerminal = false;
 
     for (const tc of toolCalls) {
       const isAutoApproved = autoApprovedTools.has(tc.function.name);
 
-      if (!terminalTools.has(tc.function.name)) allTerminal = false;
+      if (terminalTools.has(tc.function.name)) anyTerminal = true;
 
       if (!isAutoApproved) {
         this.onActivity?.({
@@ -99,6 +99,6 @@ export class Technician {
       results.push({ tool_call_id: tc.id, content: result });
     }
 
-    return { results, emotion, terminal: allTerminal };
+    return { results, emotion, terminal: anyTerminal };
   }
 }

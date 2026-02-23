@@ -1,6 +1,8 @@
 import { readFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { outfits, DEFAULT_OUTFIT } from "./outfits.js";
+import { getKv } from "../../db/kv.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -34,9 +36,17 @@ export interface MemoryContext {
 }
 
 export function buildSystemPrompt(memory?: MemoryContext): string {
-  const identity = readPromptFile("IDENTITY.md");
+  let identity = readPromptFile("IDENTITY.md");
   const agent = readPromptFile("AGENT.md");
   const user = readPromptFile("USER.md");
+
+  // Inject current outfit into Appearance section
+  const outfitName = getKv("outfit") ?? DEFAULT_OUTFIT.name;
+  const outfit = outfits.find((o) => o.name === outfitName) ?? DEFAULT_OUTFIT;
+  identity = identity.replace(
+    /## Appearance\n/,
+    `## Appearance\n- **服裝：** ${outfit.description}\n`,
+  );
 
   let raw = `# Agent\n${agent}\n\n# Identity\n${identity}\n\n# User\n${user}`;
 

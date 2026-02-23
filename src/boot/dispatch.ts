@@ -11,6 +11,7 @@ export interface DispatchEvents {
   "chat:after": [];
   "chat:command": [];
   "chat:error": [error: string];
+  "outfit:select": [];
 }
 
 export interface Dispatch {
@@ -26,10 +27,11 @@ export function createDispatch(agent: {
   const events = new EventEmitter<DispatchEvents>();
 
   const commands: SlashCommand[] = [
-    { name: "quit", description: "Exit the app" },
-    { name: "rest", description: "End session and start fresh" },
-    { name: "intro", description: "Ask Kana to introduce herself" },
     { name: "look", description: "Describe Kana's appearance" },
+    { name: "outfit", description: "Change outfit" },
+    { name: "intro", description: "Ask Kana to introduce herself" },
+    { name: "rest", description: "End session and start fresh" },
+    { name: "quit", description: "Exit the app" },
   ];
 
   function handle(text: string): void {
@@ -78,7 +80,7 @@ export function createDispatch(agent: {
         events.emit("chat:command");
         agent
           .run(
-            "The user looks at you. Call describe_agent with a second-person narrative description of your appearance, clothing, expression, and features. Then respond — you notice them looking, react in character. Use the conversation language.",
+            "The user looks at you. Call describe_agent with a third-person narrative description of what the user sees — your appearance, clothing, expression, features. Then respond — you notice them looking, react in character. Use the conversation language.",
             { label: "/look  Describe Kana's appearance" },
           )
           .then(() => events.emit("chat:after"))
@@ -86,6 +88,9 @@ export function createDispatch(agent: {
             const msg = err instanceof Error ? err.message : "Unknown error";
             events.emit("chat:error", msg);
           });
+        return;
+      case "outfit":
+        events.emit("outfit:select");
         return;
     }
   }

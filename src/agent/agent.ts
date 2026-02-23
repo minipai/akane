@@ -98,6 +98,11 @@ export class Agent {
     this.technician.setOnEmotionChange(cb);
   }
 
+  /** Rebuild and update the system prompt without resetting the session. */
+  refreshPrompt(): void {
+    this.scribe.updateSystemPrompt(this.buildPrompt());
+  }
+
   getMessages() {
     return this.scribe.getMessages();
   }

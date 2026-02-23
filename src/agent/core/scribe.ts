@@ -78,6 +78,13 @@ export class Scribe {
     }
   }
 
+  /** Update the system prompt in-place without resetting the session. */
+  updateSystemPrompt(systemPrompt: string): void {
+    if (this.messages[0]?.role === "system") {
+      this.messages[0].content = systemPrompt;
+    }
+  }
+
   /** Start a new session — resets LLM context but keeps display entries. */
   newSession(systemPrompt: string): void {
     this.messages = [{ role: "system", content: systemPrompt }];

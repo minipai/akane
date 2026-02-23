@@ -6,10 +6,13 @@ import MessageList from "./MessageList.js";
 import ToolPanel from "./ToolPanel.js";
 import InputBar from "./InputBar.js";
 import ApprovalBar from "./ApprovalBar.js";
+import OutfitMenu from "./OutfitMenu.js";
 import StatusBar from "./StatusBar.js";
 import type { Agent } from "../agent/agent.js";
 import type { ChatEntry, ToolActivity, ToolApprovalRequest, Entry } from "../agent/types.js";
 import type { Dispatch } from "../boot/dispatch.js";
+import { outfits, DEFAULT_OUTFIT } from "../agent/prompts/outfits.js";
+import { getKv, setKv } from "../db/kv.js";
 
 function formatToolArgs(name: string, argsJson: string): string {
   try {
@@ -53,6 +56,7 @@ export default function App({ agent, dispatch, model }: Props) {
   const [toolActivity, setToolActivity] = useState<ToolActivity | null>(null);
   const [pendingApproval, setPendingApproval] =
     useState<ToolApprovalRequest | null>(null);
+  const [outfitSelecting, setOutfitSelecting] = useState(false);
   const [, setVitalsTick] = useState(0);
 
   const mergeEntries = useCallback((): Entry[] => {
@@ -84,6 +88,9 @@ export default function App({ agent, dispatch, model }: Props) {
       setLoading(false);
       setToolActivity(null);
     });
+    ev.on("outfit:select", () => {
+      setOutfitSelecting(true);
+    });
     ev.on("chat:error", (errMsg) => {
       setEntries((prev) => [
         ...prev,
@@ -108,6 +115,31 @@ export default function App({ agent, dispatch, model }: Props) {
     },
     [pendingApproval],
   );
+
+  const handleOutfitSelect = useCallback(
+    (outfit: { name: string }) => {
+      setOutfitSelecting(false);
+      setKv("outfit", outfit.name);
+      agent.refreshPrompt();
+      dispatch.events.emit("chat:command");
+      setLoading(true);
+      agent
+        .run(
+          `Your outfit just changed to ${outfit.name}. React naturally — comment on your new look, how it feels, etc. Use the conversation language.`,
+          { label: `/outfit  ${outfit.name}` },
+        )
+        .then(() => dispatch.events.emit("chat:after"))
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : "Unknown error";
+          dispatch.events.emit("chat:error", msg);
+        });
+    },
+    [agent, dispatch],
+  );
+
+  const handleOutfitCancel = useCallback(() => {
+    setOutfitSelecting(false);
+  }, []);
 
   const handleSubmit = useCallback(
     (text: string) => { dispatch.handle(text); },
@@ -150,7 +182,14 @@ export default function App({ agent, dispatch, model }: Props) {
         </Box>
       )}
 
-      {pendingApproval ? (
+      {outfitSelecting ? (
+        <OutfitMenu
+          outfits={outfits}
+          currentName={getKv("outfit") ?? DEFAULT_OUTFIT.name}
+          onSelect={handleOutfitSelect}
+          onCancel={handleOutfitCancel}
+        />
+      ) : pendingApproval ? (
         <ApprovalBar onApproval={handleApproval} />
       ) : (
         <InputBar onSubmit={handleSubmit} disabled={loading} commands={dispatch.commands} />

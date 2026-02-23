@@ -6,6 +6,7 @@ import { Memory } from "./memory/memory.js";
 import type { Cache } from "../boot/cache.js";
 import { tools } from "./tools/index.js";
 import { buildSystemPrompt } from "./prompts/index.js";
+import { setKv } from "../db/kv.js";
 import { generateNextQuestion } from "./tools/user-facts.js";
 import { Scribe } from "./core/scribe.js";
 import { Vitals } from "./core/vitals.js";
@@ -101,6 +102,40 @@ export class Agent {
   /** Rebuild and update the system prompt without resetting the session. */
   refreshPrompt(): void {
     this.scribe.updateSystemPrompt(this.buildPrompt());
+  }
+
+  /** Introduce yourself. */
+  introduce(): Promise<string> {
+    return this.run("Introduce yourself — who you are, your personality, and what you can do.", {
+      label: "/intro  Ask Kana to introduce herself",
+    });
+  }
+
+  /** Describe appearance for /look. */
+  look(): Promise<string> {
+    return this.run(
+      "The user looks at you. Call describe_agent with a third-person narrative description of what the user sees — your appearance, clothing, expression, features. Then respond — you notice them looking, react in character. Use the conversation language.",
+      { label: "/look  Describe Kana's appearance" },
+    );
+  }
+
+  /** Say goodbye and end the session. */
+  async beginRest(): Promise<void> {
+    await this.run(
+      "The user wants to rest and end this session. Respond briefly with a warm goodbye first, then call rest_session with a second-person narrative description of how you settle down to rest. Use the conversation language.",
+      { label: "/rest  End session and start fresh" },
+    );
+    await this.rest();
+  }
+
+  /** Change outfit: persist to KV, refresh prompt, and react. */
+  changeOutfit(name: string): Promise<string> {
+    setKv("outfit", name);
+    this.refreshPrompt();
+    return this.run(
+      `Your outfit just changed to ${name}. React naturally — comment on your new look, how it feels, etc. Use the conversation language.`,
+      { label: `/outfit  ${name}` },
+    );
   }
 
   getMessages() {

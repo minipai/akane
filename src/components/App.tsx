@@ -12,7 +12,7 @@ import type { Agent } from "../agent/agent.js";
 import type { ChatEntry, ToolActivity, ToolApprovalRequest, Entry } from "../agent/types.js";
 import type { Dispatch } from "../boot/dispatch.js";
 import { outfits, DEFAULT_OUTFIT } from "../agent/prompts/outfits.js";
-import { getKv, setKv } from "../db/kv.js";
+import { getKv } from "../db/kv.js";
 
 function formatToolArgs(name: string, argsJson: string): string {
   try {
@@ -119,22 +119,9 @@ export default function App({ agent, dispatch, model }: Props) {
   const handleOutfitSelect = useCallback(
     (outfit: { name: string }) => {
       setOutfitSelecting(false);
-      setKv("outfit", outfit.name);
-      agent.refreshPrompt();
-      dispatch.events.emit("chat:command");
-      setLoading(true);
-      agent
-        .run(
-          `Your outfit just changed to ${outfit.name}. React naturally — comment on your new look, how it feels, etc. Use the conversation language.`,
-          { label: `/outfit  ${outfit.name}` },
-        )
-        .then(() => dispatch.events.emit("chat:after"))
-        .catch((err: unknown) => {
-          const msg = err instanceof Error ? err.message : "Unknown error";
-          dispatch.events.emit("chat:error", msg);
-        });
+      dispatch.handle(`/outfit ${outfit.name}`);
     },
-    [agent, dispatch],
+    [dispatch],
   );
 
   const handleOutfitCancel = useCallback(() => {

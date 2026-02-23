@@ -35,29 +35,6 @@ export const autoApprovedTools = new Set([
   "update_user_fact",
 ]);
 
-export function formatToolArgs(name: string, argsJson: string): string {
-  try {
-    const parsed = JSON.parse(argsJson);
-    switch (name) {
-      case "shell":
-        return parsed.command ?? argsJson;
-      case "set_emotion":
-        return parsed.emotion ?? argsJson;
-      case "note_about_user":
-        return `[${parsed.category}] ${parsed.fact}`;
-      case "get_user_facts":
-        return parsed.category ?? argsJson;
-      case "update_user_fact":
-        if (parsed.delete) return `delete #${parsed.id}`;
-        return `#${parsed.id}: ${parsed.fact ?? argsJson}`;
-      default:
-        return argsJson;
-    }
-  } catch {
-    return argsJson;
-  }
-}
-
 export async function executeTool(
   name: string,
   args: string,

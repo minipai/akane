@@ -1,117 +1,56 @@
+import { eq, desc } from "drizzle-orm";
+import type { Db } from "../db/db.js";
+import { diary } from "../db/schema.js";
 import type { ChatEntry, Compressor } from "../types.js";
 import type { MemoryContext } from "../prompts/index.js";
-import type { DiaryType } from "./diary.js";
-import type { Category } from "./user-facts.js";
-import {
-  initMemory,
-  createConversation,
-  endConversation,
-  getActiveConversation,
-  getConversationMessages,
-  saveMessage,
-  getRecentDiaries,
-  generateDiary,
-} from "./index.js";
-import {
-  insertFact,
-  getFactsByCategory,
-  getCategoryForFact,
-  updateFact,
-  deleteFact,
-  upsertProfile,
-  getAllProfiles,
-} from "./user-facts.js";
+import { generateDiary, type DiaryType } from "./diary.js";
+import * as conv from "./conversations.js";
+import * as facts from "./facts.js";
+import type { Category } from "./facts.js";
 
-export interface Memory {
-  // Conversations
-  createConversation(): string;
-  endConversation(id: string, summary?: string): void;
-  getActiveConversation(): string | null;
-  getConversationMessages(id: string): ChatEntry[];
-  saveMessage(conversationId: string, entry: ChatEntry): void;
-
-  // Diary
-  fadeMemories(): Promise<void>;
-  getRecentDiaries(type: DiaryType, limit: number): string[];
-
-  // User facts
-  insertFact(category: Category, fact: string): number;
-  getFactsByCategory(category: Category): { id: number; fact: string }[];
-  getCategoryForFact(id: number): Category | null;
-  updateFact(id: number, fact: string): void;
-  deleteFact(id: number): void;
-
-  // User profile
-  upsertProfile(category: Category, summary: string): void;
-  getAllProfiles(): Record<string, string>;
-
-  // Prompt context
-  buildContext(recentSummary?: string | null): MemoryContext;
-}
-
-export class SqliteMemory implements Memory {
+export class Memory {
+  private db: Db;
   private compress: Compressor;
 
-  constructor(compress: Compressor) {
+  constructor(db: Db, compress: Compressor) {
+    this.db = db;
     this.compress = compress;
-    initMemory();
   }
 
-  createConversation(): string {
-    return createConversation();
-  }
+  // --- Conversations ---
 
-  endConversation(id: string, summary?: string): void {
-    endConversation(id, summary);
-  }
+  createConversation(): string { return conv.createConversation(this.db); }
+  getActiveConversation(): string | null { return conv.getActiveConversation(this.db); }
+  getConversationMessages(conversationId: string): ChatEntry[] { return conv.getConversationMessages(this.db, conversationId); }
+  saveMessage(conversationId: string, entry: ChatEntry): void { conv.saveMessage(this.db, conversationId, entry); }
+  endConversation(conversationId: string, summary?: string): void { conv.endConversation(this.db, conversationId, summary); }
 
-  getActiveConversation(): string | null {
-    return getActiveConversation();
-  }
+  // --- Diary ---
 
-  getConversationMessages(id: string): ChatEntry[] {
-    return getConversationMessages(id);
-  }
-
-  saveMessage(conversationId: string, entry: ChatEntry): void {
-    saveMessage(conversationId, entry);
-  }
-
-  async fadeMemories(): Promise<void> {
-    return generateDiary(this.compress);
-  }
+  async fadeMemories(): Promise<void> { return generateDiary(this.db, this.compress); }
 
   getRecentDiaries(type: DiaryType, limit: number): string[] {
-    return getRecentDiaries(type, limit);
+    const rows = this.db
+      .select({ summary: diary.summary })
+      .from(diary)
+      .where(eq(diary.type, type))
+      .orderBy(desc(diary.date))
+      .limit(limit)
+      .all();
+    return rows.map((r) => r.summary);
   }
 
-  insertFact(category: Category, fact: string): number {
-    return insertFact(category, fact);
-  }
+  // --- User facts ---
 
-  getFactsByCategory(category: Category): { id: number; fact: string }[] {
-    return getFactsByCategory(category);
-  }
+  insertFact(category: Category, fact: string): number { return facts.insertFact(this.db, category, fact); }
+  getFactsByCategory(category: Category): { id: number; fact: string }[] { return facts.getFactsByCategory(this.db, category); }
+  getCategoryForFact(id: number): Category | null { return facts.getCategoryForFact(this.db, id); }
+  updateFact(id: number, fact: string): void { facts.updateFact(this.db, id, fact); }
+  deleteFact(id: number): void { facts.deleteFact(this.db, id); }
+  upsertProfile(category: Category, summary: string): void { facts.upsertProfile(this.db, category, summary); }
+  getAllProfiles(): Record<string, string> { return facts.getAllProfiles(this.db); }
 
-  getCategoryForFact(id: number): Category | null {
-    return getCategoryForFact(id);
-  }
-
-  updateFact(id: number, fact: string): void {
-    updateFact(id, fact);
-  }
-
-  deleteFact(id: number): void {
-    deleteFact(id);
-  }
-
-  upsertProfile(category: Category, summary: string): void {
-    upsertProfile(category, summary);
-  }
-
-  getAllProfiles(): Record<string, string> {
-    return getAllProfiles();
-  }
+  // --- Prompt context ---
 
   buildContext(recentSummary?: string | null): MemoryContext {
     return {

@@ -1,9 +1,10 @@
 import type { ChatClient } from "../types.js";
 import type { ChatCompletionMessage } from "openai/resources/chat/completions";
 import type { ChatEntry } from "../types.js";
-import type { Memory } from "../memory/memory.js";
+import type { Db } from "../db/db.js";
+import { Memory } from "../memory/memory.js";
 import type { Cache } from "../boot/cache.js";
-import { tools, formatToolArgs } from "../tools/index.js";
+import { tools } from "../tools/index.js";
 import { buildSystemPrompt } from "../prompts/index.js";
 import { generateNextQuestion } from "../tools/user-facts.js";
 import { Scribe } from "./scribe.js";
@@ -14,7 +15,6 @@ import type { OnToolActivity, OnToolApproval, OnEmotionChange } from "./technici
 
 export type { OnToolActivity, OnToolApproval, OnEmotionChange };
 export type { ChatEntry, ToolActivity, ToolApprovalRequest } from "../types.js";
-export { formatToolArgs };
 
 const MAX_ITERATIONS = 10;
 
@@ -29,15 +29,15 @@ export class Agent {
   private secretary: Secretary;
   private isFirstUserMessage = true;
 
-  constructor(client: ChatClient, memory: Memory, cache: Cache) {
+  constructor(client: ChatClient, db: Db, cache: Cache) {
     this.client = client;
-    this.memory = memory;
+    this.memory = new Memory(db, client.compress.bind(client));
     this.cache = cache;
-    this.buildPrompt = () => buildSystemPrompt(memory.buildContext(cache.recentSummary));
-    this.scribe = new Scribe(this.buildPrompt(), memory);
+    this.buildPrompt = () => buildSystemPrompt(this.memory.buildContext(cache.recentSummary));
+    this.scribe = new Scribe(this.buildPrompt(), this.memory);
     this.vitals = new Vitals(cache);
-    this.technician = new Technician(memory, cache, client.compress.bind(client));
-    this.secretary = new Secretary(memory, cache, client.compress.bind(client));
+    this.technician = new Technician(this.memory, cache, client.compress.bind(client));
+    this.secretary = new Secretary(this.memory, cache, client.compress.bind(client));
   }
 
   /** Resume or create a session. */

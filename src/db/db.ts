@@ -13,7 +13,9 @@ mkdirSync(DATA_DIR, { recursive: true });
 const DB_PATH = join(DATA_DIR, "memory.db");
 const MIGRATIONS_DIR = join(PROJECT_ROOT, "drizzle");
 
-let db: ReturnType<typeof drizzle<typeof schema>> | null = null;
+export type Db = ReturnType<typeof drizzle<typeof schema>>;
+
+let db: Db | null = null;
 
 export function getDb() {
   if (!db) {

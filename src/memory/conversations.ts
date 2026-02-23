@@ -1,24 +1,18 @@
 import { randomUUID } from "crypto";
-import { eq, desc, and, isNull, isNotNull, gte, inArray } from "drizzle-orm";
-import { getDb } from "../db/db.js";
+import { eq, desc, and, isNull, inArray } from "drizzle-orm";
+import type { Db } from "../db/db.js";
 import { conversations, messages } from "../db/schema.js";
 import type { ChatEntry, Message } from "../types.js";
 
-export function initMemory(): void {
-  getDb(); // ensures DB + tables exist
-}
-
-export function createConversation(): string {
+export function createConversation(db: Db): string {
   const id = randomUUID();
-  const db = getDb();
   db.insert(conversations)
     .values({ id, startedAt: new Date().toISOString() })
     .run();
   return id;
 }
 
-export function getActiveConversation(): string | null {
-  const db = getDb();
+export function getActiveConversation(db: Db): string | null {
   const row = db
     .select({ id: conversations.id })
     .from(conversations)
@@ -29,8 +23,7 @@ export function getActiveConversation(): string | null {
   return row?.id ?? null;
 }
 
-export function getConversationMessages(conversationId: string): ChatEntry[] {
-  const db = getDb();
+export function getConversationMessages(db: Db, conversationId: string): ChatEntry[] {
   const rows = db
     .select()
     .from(messages)
@@ -54,10 +47,7 @@ export function getConversationMessages(conversationId: string): ChatEntry[] {
   });
 }
 
-export function saveMessage(
-  conversationId: string,
-  entry: ChatEntry,
-): void {
+export function saveMessage(db: Db, conversationId: string, entry: ChatEntry): void {
   const msg = entry.message;
   const role = "role" in msg ? (msg.role as string) : "unknown";
   const content =
@@ -68,7 +58,6 @@ export function saveMessage(
     toolCalls = JSON.stringify(msg.tool_calls);
   }
 
-  const db = getDb();
   db.insert(messages)
     .values({
       conversationId,
@@ -81,11 +70,7 @@ export function saveMessage(
     .run();
 }
 
-export function endConversation(
-  conversationId: string,
-  summary?: string,
-): void {
-  const db = getDb();
+export function endConversation(db: Db, conversationId: string, summary?: string): void {
   db.update(conversations)
     .set({
       endedAt: new Date().toISOString(),
@@ -94,6 +79,3 @@ export function endConversation(
     .where(eq(conversations.id, conversationId))
     .run();
 }
-
-export { getRecentDiaries } from "./diary.js";
-export { generateDiary } from "./diary.js";

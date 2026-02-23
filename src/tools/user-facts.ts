@@ -2,12 +2,20 @@ import type { ChatCompletionTool } from "openai/resources/chat/completions";
 import type { Memory } from "../memory/memory.js";
 import type { Cache } from "../boot/cache.js";
 import type { Compressor } from "../types.js";
-import {
-  CATEGORIES,
-  CATEGORY_LABELS,
-  SUBTOPICS,
-} from "../memory/user-facts.js";
-import type { Category } from "../memory/user-facts.js";
+
+const CATEGORY_DEFS = [
+  { category: "identity",    label: "Identity & Background",    subtopics: ["name", "location", "language", "nationality", "timezone", "demographics"] },
+  { category: "relations",   label: "Relationships",            subtopics: ["family", "partner", "kids", "close friends", "pets"] },
+  { category: "career",      label: "Career & Skills",          subtopics: ["job", "industry", "skills", "tech stack", "professional goals"] },
+  { category: "preferences", label: "Preferences & Lifestyle",  subtopics: ["food", "colors", "aesthetics", "hobbies", "daily habits", "lifestyle"] },
+  { category: "mindset",     label: "Personality & Mindset",    subtopics: ["personality traits", "beliefs", "ethics", "worldview", "interaction style"] },
+  { category: "timeline",    label: "Timeline & Plans",         subtopics: ["life milestones", "goals", "commitments", "open loops", "plans"] },
+] as const;
+
+type Category = (typeof CATEGORY_DEFS)[number]["category"];
+const CATEGORIES = CATEGORY_DEFS.map((d) => d.category);
+const CATEGORY_LABELS = Object.fromEntries(CATEGORY_DEFS.map((d) => [d.category, d.label])) as Record<Category, string>;
+const SUBTOPICS = Object.fromEntries(CATEGORY_DEFS.map((d) => [d.category, d.subtopics as unknown as string[]])) as Record<Category, string[]>;
 import type { ToolContext } from "./index.js";
 
 export const noteAboutUserToolDef: ChatCompletionTool = {

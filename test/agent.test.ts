@@ -657,6 +657,118 @@ describe("Agent", () => {
     });
   });
 
+  // ─── Retry ─────────────────────────────────────────────────────
+
+  describe("retry", () => {
+    it("retry() removes last assistant response and regenerates", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(textResponse("First answer"))
+        .mockResolvedValueOnce(textResponse("Second answer"));
+
+      await agent.run("hello");
+      const result = await agent.retry();
+
+      expect(result).toBe("Second answer");
+      // Two LLM calls: original + retry
+      expect(client.chat).toHaveBeenCalledTimes(2);
+    });
+
+    it("retry() with no prior messages returns '(nothing to retry)'", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      const result = await agent.retry();
+      expect(result).toBe("(nothing to retry)");
+    });
+
+    it("retry() removes assistant messages from DB", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(textResponse("Old response"))
+        .mockResolvedValueOnce(textResponse("New response"));
+
+      await agent.run("hello");
+
+      // Before retry: should have user + assistant messages
+      const beforeRows = db.select().from(messages).all();
+      const beforeCount = beforeRows.length;
+      expect(beforeCount).toBeGreaterThanOrEqual(2);
+
+      await agent.retry();
+
+      // After retry: old assistant removed, new one added
+      // Net effect: same user message, different assistant message
+      const afterRows = db.select().from(messages).all();
+      const assistantRows = afterRows.filter((r) => r.role === "assistant");
+      expect(assistantRows).toHaveLength(1);
+      expect(assistantRows[0].content).toBe("New response");
+    });
+
+    it("retry() preserves the user message in history", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(textResponse("Old"))
+        .mockResolvedValueOnce(textResponse("New"));
+
+      await agent.run("my question");
+      await agent.retry();
+
+      // The user message should still be in the LLM messages
+      const msgs = agent.getMessages();
+      const userMsgs = msgs.filter((m: any) => m.role === "user" && m.content === "my question");
+      expect(userMsgs).toHaveLength(1);
+    });
+
+    it("retry() after tool call turn removes tool messages too", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc1", name: "set_emotion", args: '{"emotion":"happy"}' },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("I'm happy!"))
+        // Retry responses
+        .mockResolvedValueOnce(textResponse("Different answer"));
+
+      await agent.run("tell me something");
+      await agent.retry();
+
+      // Should only have: system, user, new assistant
+      const msgs = agent.getMessages();
+      const toolMsgs = msgs.filter((m: any) => m.role === "tool");
+      expect(toolMsgs).toHaveLength(0);
+
+      const assistantMsgs = msgs.filter((m: any) => m.role === "assistant");
+      expect(assistantMsgs).toHaveLength(1);
+      expect(assistantMsgs[0].content).toBe("Different answer");
+    });
+
+    it("retry() does not duplicate the user message", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(textResponse("First"))
+        .mockResolvedValueOnce(textResponse("Second"));
+
+      await agent.run("hello");
+      await agent.retry();
+
+      const userDbRows = db.select().from(messages).all().filter((r) => r.role === "user");
+      expect(userDbRows).toHaveLength(1);
+    });
+  });
+
   // ─── Config DB layer ────────────────────────────────────────────
 
   describe("config DB layer", () => {

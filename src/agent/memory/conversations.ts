@@ -69,6 +69,20 @@ export function saveMessage(db: Db, conversationId: string, entry: ChatEntry): v
     .run();
 }
 
+export function deleteLastMessages(db: Db, conversationId: string, count: number): void {
+  if (count <= 0) return;
+  const rows = db
+    .select({ id: messages.id })
+    .from(messages)
+    .where(eq(messages.conversationId, conversationId))
+    .orderBy(desc(messages.id))
+    .limit(count)
+    .all();
+  if (rows.length === 0) return;
+  const ids = rows.map((r) => r.id);
+  db.delete(messages).where(inArray(messages.id, ids)).run();
+}
+
 export function endConversation(db: Db, conversationId: string, summary?: string): void {
   db.update(conversations)
     .set({

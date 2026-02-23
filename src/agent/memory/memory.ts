@@ -24,6 +24,7 @@ export class Memory {
   getConversationMessages(conversationId: string): ChatEntry[] { return conv.getConversationMessages(this.db, conversationId); }
   saveMessage(conversationId: string, entry: ChatEntry): void { conv.saveMessage(this.db, conversationId, entry); }
   endConversation(conversationId: string, summary?: string): void { conv.endConversation(this.db, conversationId, summary); }
+  deleteLastMessages(conversationId: string, count: number): void { conv.deleteLastMessages(this.db, conversationId, count); }
 
   // --- Diary ---
 

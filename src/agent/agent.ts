@@ -152,6 +152,38 @@ export class Agent {
     );
   }
 
+  /** Remove the last assistant response and regenerate it. */
+  async retry(): Promise<string> {
+    const result = this.scribe.popLastTurn();
+    if (!result) return "(nothing to retry)";
+
+    // Re-run the LLM loop (don't call run() — the user message is already in messages[])
+    for (let i = 0; i < MAX_ITERATIONS; i++) {
+      const message = await this.callLLM();
+      if (!message) return "(no response)";
+
+      this.scribe.addMessage(message);
+
+      const calls = message.tool_calls?.filter((tc) => tc.type === "function");
+      if (!calls || calls.length === 0) {
+        return message.content ?? "(no response)";
+      }
+
+      const { results, emotion, terminal } = await this.technician.run(calls);
+
+      if (emotion) this.scribe.setEmotion(emotion);
+      for (const r of results) {
+        this.scribe.addMessage({ role: "tool", tool_call_id: r.tool_call_id, content: r.content });
+      }
+
+      if (terminal) {
+        return message.content ?? "";
+      }
+    }
+
+    return "(max iterations reached)";
+  }
+
   getMessages() {
     return this.scribe.getMessages();
   }

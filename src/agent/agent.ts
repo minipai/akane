@@ -1,6 +1,6 @@
 import type { ChatClient } from "../types.js";
 import type { ChatCompletionMessage } from "openai/resources/chat/completions";
-import type { ChatEntry, InfoEntry } from "../types.js";
+import type { InfoEntry, Entry } from "../types.js";
 import type { Db } from "../db/db.js";
 import { Memory } from "./memory/memory.js";
 import type { Cache } from "../boot/cache.js";
@@ -24,7 +24,6 @@ export class Agent {
   readonly vitals: Vitals;
   private technician: Technician;
   private secretary: Secretary;
-  private infos: InfoEntry[] = [];
   private isFirstUserMessage = true;
 
   constructor(client: ChatClient, db: Db, cache: Cache) {
@@ -34,7 +33,11 @@ export class Agent {
     this.buildPrompt = () => buildSystemPrompt(this.memory.buildContext(cache.recentSummary));
     this.scribe = new Scribe(this.buildPrompt(), this.memory);
     this.vitals = new Vitals(cache);
-    this.technician = new Technician(this.memory, cache, client.compress.bind(client));
+    this.technician = new Technician(
+      this.memory, cache, client.compress.bind(client),
+      this.addInfo.bind(this),
+      () => this.vitals.setTotalTokens(0),
+    );
     this.secretary = new Secretary(this.memory, cache, client.compress.bind(client));
   }
 
@@ -59,6 +62,7 @@ export class Agent {
 
   /** Lazily create a conversation on first message. */
   private ensureConversation(): void {
+    this.resetIfNeeded();
     if (this.scribe.getConversationId()) return;
     const id = this.memory.createConversation();
     this.scribe.setConversationId(id);
@@ -67,13 +71,19 @@ export class Agent {
   /** End the current session and start a fresh one. */
   async rest(): Promise<void> {
     const currentId = this.scribe.getConversationId();
-    const entries = this.scribe.getEntries();
+    const entries = this.scribe.getChatEntries();
 
-    // Reset agent immediately so it's ready for the new session
-    this.scribe.reset(this.buildPrompt());
-    this.infos = [];
+    this.needsReset = true;
     await this.secretary.rest(currentId, entries);
-    // conversationId stays null — lazy init on next message
+  }
+
+  private needsReset = false;
+
+  /** Start a fresh LLM session lazily so the UI keeps showing the old conversation. */
+  private resetIfNeeded(): void {
+    if (!this.needsReset) return;
+    this.needsReset = false;
+    this.scribe.newSession(this.buildPrompt());
   }
 
   setOnToolActivity(cb: OnToolActivity): void {
@@ -92,29 +102,14 @@ export class Agent {
     return this.scribe.getMessages();
   }
 
-  getEntries(): ChatEntry[] {
+  getEntries(): Entry[] {
     return this.scribe.getEntries();
   }
 
-  getInfos(): InfoEntry[] {
-    return this.infos;
+  addInfo(info: InfoEntry): void {
+    this.scribe.addInfo(info);
   }
 
-  async inspect(prompt: string, label: string): Promise<string> {
-    const system = this.buildPrompt();
-    const { message, totalTokens } = await this.client.chat({
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: prompt },
-      ],
-    });
-
-    if (totalTokens) this.vitals.addTokens(totalTokens);
-
-    const content = message?.content ?? "(no response)";
-    this.infos.push({ kind: "info", label, content, ts: Date.now() });
-    return content;
-  }
 
   async run(userInput: string, opts?: { label?: string }): Promise<string> {
     this.ensureConversation();
@@ -136,18 +131,22 @@ export class Agent {
       const message = await this.callLLM();
       if (!message) return "(no response)";
 
-      this.scribe.addMessage(message);
-
       const calls = message.tool_calls?.filter((tc) => tc.type === "function");
       if (!calls || calls.length === 0) {
+        this.scribe.addMessage(message);
         return message.content ?? "(no response)";
       }
 
-      const { results, emotion } = await this.technician.run(calls);
+      this.scribe.addMessage(message);
+      const { results, emotion, terminal } = await this.technician.run(calls);
 
       if (emotion) this.scribe.setEmotion(emotion);
       for (const r of results) {
         this.scribe.addMessage({ role: "tool", tool_call_id: r.tool_call_id, content: r.content });
+      }
+
+      if (terminal) {
+        return message.content ?? "";
       }
     }
 

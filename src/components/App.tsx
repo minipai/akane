@@ -26,6 +26,10 @@ function formatToolArgs(name: string, argsJson: string): string {
       case "update_user_fact":
         if (parsed.delete) return `delete #${parsed.id}`;
         return `#${parsed.id}: ${parsed.fact ?? argsJson}`;
+      case "describe_agent":
+        return parsed.description ? parsed.description.slice(0, 60) + "…" : argsJson;
+      case "rest_session":
+        return parsed.description ? parsed.description.slice(0, 60) + "…" : argsJson;
       default:
         return argsJson;
     }
@@ -52,8 +56,7 @@ export default function App({ agent, dispatch, model }: Props) {
   const [, setVitalsTick] = useState(0);
 
   const mergeEntries = useCallback((): Entry[] => {
-    const all: Entry[] = [...agent.getEntries(), ...agent.getInfos()];
-    return all.sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0));
+    return agent.getEntries();
   }, [agent]);
 
   useEffect(() => {
@@ -64,14 +67,6 @@ export default function App({ agent, dispatch, model }: Props) {
 
     const ev = dispatch.events;
     ev.on("quit", () => exit());
-    ev.on("rest:before", () => {
-      displayFrom.current = 0;
-      setEntries([{ message: { role: "assistant", content: "(｡-ω-)zzZ Resting..." }, emotion: "neutral" }]);
-    });
-    ev.on("rest:after", () => {
-      agent.vitals.setTotalTokens(0);
-      setEntries(mergeEntries());
-    });
     ev.on("chat:command", () => {
       setEntries(mergeEntries());
       setLoading(true);
@@ -83,7 +78,9 @@ export default function App({ agent, dispatch, model }: Props) {
       setToolActivity(null);
     });
     ev.on("chat:after", () => {
-      setEntries(mergeEntries());
+      const merged = mergeEntries();
+      if (displayFrom.current > merged.length) displayFrom.current = 0;
+      setEntries(merged);
       setLoading(false);
       setToolActivity(null);
     });

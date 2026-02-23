@@ -7,8 +7,6 @@ export interface SlashCommand {
 
 export interface DispatchEvents {
   quit: [];
-  "rest:before": [];
-  "rest:after": [];
   "chat:before": [text: string];
   "chat:after": [];
   "chat:command": [];
@@ -24,7 +22,6 @@ export interface Dispatch {
 export function createDispatch(agent: {
   run(text: string, opts?: { label?: string }): Promise<string>;
   rest(): Promise<void>;
-  inspect(prompt: string, label: string): Promise<string>;
 }): Dispatch {
   const events = new EventEmitter<DispatchEvents>();
 
@@ -54,9 +51,14 @@ export function createDispatch(agent: {
         events.emit("quit");
         return;
       case "rest":
-        events.emit("rest:before");
-        agent.rest()
-          .then(() => events.emit("rest:after"))
+        events.emit("chat:command");
+        agent
+          .run(
+            "The user wants to rest and end this session. Respond briefly with a warm goodbye first, then call rest_session with a second-person narrative description of how you settle down to rest. Use the conversation language.",
+            { label: "/rest  End session and start fresh" },
+          )
+          .then(() => agent.rest())
+          .then(() => events.emit("chat:after"))
           .catch((err: unknown) => {
             const msg = err instanceof Error ? err.message : "Unknown error";
             events.emit("chat:error", msg);
@@ -75,9 +77,9 @@ export function createDispatch(agent: {
       case "look":
         events.emit("chat:command");
         agent
-          .inspect(
-            "Write a second-person narrative description of your appearance, clothing, expression, and notable features. Do not write in a conversational tone — write it as descriptive prose. Respond in the conversation language.",
-            "/look  Describe Kana's appearance",
+          .run(
+            "The user looks at you. Call describe_agent with a second-person narrative description of your appearance, clothing, expression, and features. Then respond — you notice them looking, react in character. Use the conversation language.",
+            { label: "/look  Describe Kana's appearance" },
           )
           .then(() => events.emit("chat:after"))
           .catch((err: unknown) => {

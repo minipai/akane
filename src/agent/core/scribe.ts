@@ -1,10 +1,10 @@
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
-import type { Message, ChatEntry } from "../../types.js";
+import type { Message, ChatEntry, Entry, InfoEntry } from "../../types.js";
 import type { Memory } from "../memory/memory.js";
 
 export class Scribe {
   private messages: Message[] = [];
-  private entries: ChatEntry[] = [];
+  private entries: Entry[] = [];
   private conversationId: string | null = null;
   private currentEmotion: string = "neutral";
   private memory: Memory;
@@ -28,8 +28,16 @@ export class Scribe {
     return this.messages;
   }
 
-  getEntries(): ChatEntry[] {
+  getEntries(): Entry[] {
     return this.entries;
+  }
+
+  getChatEntries(): ChatEntry[] {
+    return this.entries.filter((e): e is ChatEntry => !("kind" in e));
+  }
+
+  addInfo(info: InfoEntry): void {
+    this.entries.push(info);
   }
 
   getEmotion(): string {
@@ -70,6 +78,13 @@ export class Scribe {
     }
   }
 
+  /** Start a new session — resets LLM context but keeps display entries. */
+  newSession(systemPrompt: string): void {
+    this.messages = [{ role: "system", content: systemPrompt }];
+    this.conversationId = null;
+    this.currentEmotion = "neutral";
+  }
+
   reset(systemPrompt?: string): void {
     const prompt =
       systemPrompt ??
@@ -79,6 +94,7 @@ export class Scribe {
     const msg: Message = { role: "system", content: prompt };
     this.messages = [msg];
     this.entries = [{ message: msg }];
+    this.conversationId = null;
     this.currentEmotion = "neutral";
   }
 }

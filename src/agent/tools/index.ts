@@ -1,7 +1,7 @@
 import type { ChatCompletionTool } from "openai/resources/chat/completions";
 import type { Memory } from "../memory/memory.js";
 import type { Cache } from "../../boot/cache.js";
-import type { Compressor } from "../../types.js";
+import type { Compressor, InfoEntry } from "../../types.js";
 import { shellToolDef, executeShell } from "./shell.js";
 import { emotionToolDef, executeEmotion } from "./emotion.js";
 import {
@@ -12,11 +12,15 @@ import {
   executeGetUserFacts,
   executeUpdateUserFact,
 } from "./user-facts.js";
+import { describeAgentToolDef, executeDescribeAgent } from "./describe.js";
+import { restSessionToolDef, executeRestSession } from "./rest.js";
 
 export interface ToolContext {
   memory: Memory;
   cache: Cache;
   compress: Compressor;
+  addInfo: (info: InfoEntry) => void;
+  onRest?: () => void;
 }
 
 export const tools: ChatCompletionTool[] = [
@@ -25,7 +29,12 @@ export const tools: ChatCompletionTool[] = [
   noteAboutUserToolDef,
   getUserFactsToolDef,
   updateUserFactToolDef,
+  describeAgentToolDef,
+  restSessionToolDef,
 ];
+
+/** Tools that don't need a follow-up LLM call — their output is the final response. */
+export const terminalTools = new Set(["rest_session"]);
 
 /** Tools that are auto-approved (no user confirmation needed). */
 export const autoApprovedTools = new Set([
@@ -33,6 +42,8 @@ export const autoApprovedTools = new Set([
   "note_about_user",
   "get_user_facts",
   "update_user_fact",
+  "describe_agent",
+  "rest_session",
 ]);
 
 export async function executeTool(
@@ -53,6 +64,11 @@ export async function executeTool(
       return executeGetUserFacts(parsed.category, ctx);
     case "update_user_fact":
       return executeUpdateUserFact(parsed.id, parsed.fact, parsed.delete, ctx);
+    case "describe_agent":
+      return executeDescribeAgent(parsed.description, ctx.addInfo);
+    case "rest_session":
+      ctx.onRest?.();
+      return executeRestSession(parsed.description, ctx.addInfo);
     default:
       return `Unknown tool: ${name}`;
   }

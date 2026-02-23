@@ -1,10 +1,14 @@
-import type { ToolActivity, ToolApprovalRequest } from "../../types.js";
-import { executeTool, autoApprovedTools } from "../tools/index.js";
+import type { ToolActivity, ToolApprovalRequest, InfoEntry } from "../../types.js";
+import { executeTool, autoApprovedTools, terminalTools } from "../tools/index.js";
 import type { ToolContext } from "../tools/index.js";
 
 export type OnToolActivity = (activity: ToolActivity) => void;
 export type OnToolApproval = (request: ToolApprovalRequest) => void;
 export type OnEmotionChange = (emotion: string) => void;
+
+/** Tools that run silently (no activity panel shown). */
+const silentTools = new Set(["set_emotion", "describe_agent", "rest_session"]);
+
 
 interface ToolResult {
   tool_call_id: string;
@@ -17,8 +21,14 @@ export class Technician {
   private onEmotionChange?: OnEmotionChange;
   private ctx: ToolContext;
 
-  constructor(memory: ToolContext["memory"], cache: ToolContext["cache"], compress: ToolContext["compress"]) {
-    this.ctx = { memory, cache, compress };
+  constructor(
+    memory: ToolContext["memory"],
+    cache: ToolContext["cache"],
+    compress: ToolContext["compress"],
+    addInfo: (info: InfoEntry) => void,
+    onRest?: () => void,
+  ) {
+    this.ctx = { memory, cache, compress, addInfo, onRest };
   }
 
   setOnActivity(cb: OnToolActivity): void {
@@ -35,12 +45,15 @@ export class Technician {
 
   async run(
     toolCalls: Array<{ id: string; function: { name: string; arguments: string } }>,
-  ): Promise<{ results: ToolResult[]; emotion?: string }> {
+  ): Promise<{ results: ToolResult[]; emotion?: string; terminal: boolean }> {
     const results: ToolResult[] = [];
     let emotion: string | undefined;
+    let allTerminal = true;
 
     for (const tc of toolCalls) {
       const isAutoApproved = autoApprovedTools.has(tc.function.name);
+
+      if (!terminalTools.has(tc.function.name)) allTerminal = false;
 
       if (!isAutoApproved) {
         this.onActivity?.({
@@ -75,7 +88,7 @@ export class Technician {
           emotion = parsed.emotion;
           this.onEmotionChange?.(parsed.emotion);
         } catch {}
-      } else {
+      } else if (!silentTools.has(tc.function.name)) {
         this.onActivity?.({
           name: tc.function.name,
           args: tc.function.arguments,
@@ -86,6 +99,6 @@ export class Technician {
       results.push({ tool_call_id: tc.id, content: result });
     }
 
-    return { results, emotion };
+    return { results, emotion, terminal: allTerminal };
   }
 }

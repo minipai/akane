@@ -48,7 +48,6 @@ export default function MessageList({ entries }: Props) {
         if (isInfo(entry)) {
           return (
             <Box key={i} flexDirection="column" marginBottom={0}>
-              <Text dimColor>{"❯"} {entry.label}</Text>
               <Box borderStyle="round" borderColor="#555" paddingX={1}>
                 <Text wrap="wrap">{entry.content}</Text>
               </Box>

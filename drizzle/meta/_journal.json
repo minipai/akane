@@ -29,6 +29,13 @@
       "when": 1771713826727,
       "tag": "0003_purple_marrow",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1771816216518,
+      "tag": "0004_mighty_ego",
+      "breakpoints": true
     }
   ]
 }

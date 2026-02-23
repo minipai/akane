@@ -37,12 +37,10 @@ export function getConversationMessages(db: Db, conversationId: string): ChatEnt
     .all();
 
   return rows.map((row) => {
-    const message: Message = {
-      role: row.role as "user" | "assistant",
-      content: row.content ?? "",
-    };
+    const message: Message = { role: row.role as "user" | "assistant", content: row.content ?? "" };
     const entry: ChatEntry = { message };
     if (row.emotion) entry.emotion = row.emotion;
+    if (row.label) entry.label = row.label;
     return entry;
   });
 }
@@ -64,6 +62,7 @@ export function saveMessage(db: Db, conversationId: string, entry: ChatEntry): v
       role,
       content,
       emotion: entry.emotion ?? null,
+      label: entry.label ?? null,
       toolCalls,
       createdAt: new Date().toISOString(),
     })

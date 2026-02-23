@@ -94,9 +94,9 @@ export class Agent {
     return this.scribe.getEntries();
   }
 
-  async run(userInput: string): Promise<string> {
+  async run(userInput: string, opts?: { label?: string }): Promise<string> {
     this.ensureConversation();
-    this.scribe.addMessage({ role: "user", content: userInput });
+    this.scribe.addMessage({ role: "user", content: userInput }, { label: opts?.label });
 
     // Nudge the model to ask a personal question on casual greetings
     if (this.isFirstUserMessage && userInput.trim().length < 20) {

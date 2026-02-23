@@ -40,12 +40,13 @@ export class Scribe {
     this.currentEmotion = emotion;
   }
 
-  addMessage(message: ChatCompletionMessageParam): void {
+  addMessage(message: ChatCompletionMessageParam, opts?: { label?: string }): void {
     this.messages.push(message);
     const entry: ChatEntry = { message };
     if (message.role === "assistant") {
       entry.emotion = this.currentEmotion;
     }
+    if (opts?.label) entry.label = opts.label;
     this.entries.push(entry);
 
     if (this.conversationId) {

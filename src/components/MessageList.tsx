@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Text } from "ink";
-import type { ChatEntry, Message } from "../types.js";
+import type { ChatEntry } from "../types.js";
 
 const EMOTION_EMOJI: Record<string, string> = {
   neutral: "•ᴗ•",
@@ -20,7 +20,7 @@ const EMOTION_EMOJI: Record<string, string> = {
   playful: "ヾ( ˃ᴗ˂ )◞ • *✰",
 };
 
-function getContent(msg: Message): string {
+function getContent(msg: ChatEntry["message"]): string {
   if (typeof msg.content === "string") return msg.content;
   if (Array.isArray(msg.content)) {
     return msg.content.map((c) => ("text" in c ? c.text : "")).join("");
@@ -34,7 +34,10 @@ interface Props {
 
 export default function MessageList({ entries }: Props) {
   const visible = entries.filter(
-    (e) => e.message.role === "user" || e.message.role === "assistant",
+    (e) =>
+      e.label ||
+      e.message.role === "user" ||
+      e.message.role === "assistant",
   );
 
   return (
@@ -42,6 +45,14 @@ export default function MessageList({ entries }: Props) {
       {visible.map((entry, i) => {
         const content = getContent(entry.message);
         if (!content) return null;
+
+        if (entry.label) {
+          return (
+            <Box key={i} marginBottom={0}>
+              <Text dimColor>{"❯"} {entry.label}</Text>
+            </Box>
+          );
+        }
 
         const isAssistant = entry.message.role === "assistant";
         const emoji = entry.emotion ? EMOTION_EMOJI[entry.emotion] : undefined;

@@ -15,6 +15,7 @@ export const messages = sqliteTable("messages", {
   role: text("role").notNull(),
   content: text("content"),
   emotion: text("emotion"),
+  label: text("label"),
   toolCalls: text("tool_calls"),
   createdAt: text("created_at").notNull(),
 });

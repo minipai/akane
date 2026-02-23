@@ -21,6 +21,7 @@ export type Compressor = ChatClient["compress"];
 export interface ChatEntry {
   message: Message;
   emotion?: string;
+  label?: string;
 }
 
 export interface ToolActivity {

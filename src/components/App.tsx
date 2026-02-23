@@ -43,8 +43,8 @@ interface Props {
 export default function App({ agent, dispatch, model }: Props) {
   const { exit } = useApp();
   const [entries, setEntries] = useState<ChatEntry[]>(agent.getEntries());
-  // Show only last 2 pairs (4 messages) on resume; +1 for system prompt entry
-  const displayFrom = useRef(Math.max(0, agent.getEntries().length - 4) + 1);
+  // Show only last 5 pairs (10 messages) on resume; +1 for system prompt entry
+  const displayFrom = useRef(Math.max(0, agent.getEntries().length - 10) + 1);
   const [loading, setLoading] = useState(false);
   const [toolActivity, setToolActivity] = useState<ToolActivity | null>(null);
   const [pendingApproval, setPendingApproval] =
@@ -66,6 +66,11 @@ export default function App({ agent, dispatch, model }: Props) {
     ev.on("rest:after", () => {
       agent.vitals.setTotalTokens(0);
       setEntries([...agent.getEntries()]);
+    });
+    ev.on("chat:command", () => {
+      setEntries([...agent.getEntries()]);
+      setLoading(true);
+      setToolActivity(null);
     });
     ev.on("chat:before", (text) => {
       setEntries([...agent.getEntries(), { message: { role: "user", content: text } }]);

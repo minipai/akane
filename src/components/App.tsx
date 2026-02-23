@@ -38,6 +38,8 @@ function formatToolArgs(name: string, argsJson: string): string {
         if (parsed.kana_name) parts.push(`kana_name=${parsed.kana_name}`);
         if (parsed.user_name) parts.push(`user_name=${parsed.user_name}`);
         if (parsed.user_nickname) parts.push(`user_nickname=${parsed.user_nickname}`);
+        if (parsed.daily_budget != null) parts.push(`daily_budget=${parsed.daily_budget}`);
+        if (parsed.session_token_limit != null) parts.push(`session_token_limit=${parsed.session_token_limit}`);
         return parts.join(", ") || argsJson;
       }
       default:

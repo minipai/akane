@@ -13,7 +13,7 @@ Optional `OPENAI_ADMIN_KEY` (org-level admin key) enables the HP bar showing dai
 
 ### Persona config
 
-Persona variables (`kana_name`, `user_name`, `user_nickname`) are stored in the `config` DB table and managed at runtime via the `/config` slash command. Defaults are centralized in `src/db/config.ts` (`DEFAULTS` map). `getConfigWithDefault()` reads from DB with built-in fallback. The `{{…}}` placeholders in prompt markdown files are replaced at runtime via `replaceVars()` in `src/agent/prompts/index.ts`.
+Persona variables (`kana_name`, `user_name`, `user_nickname`) and budget settings (`daily_budget`, `session_token_limit`) are stored in the `config` DB table and managed at runtime via the `/config` slash command. Defaults are centralized in `src/db/config.ts` (`DEFAULTS` map). `getConfigWithDefault()` reads from DB with built-in fallback; `getConfigNumber()` does the same but returns a `number`. The `{{…}}` placeholders in prompt markdown files are replaced at runtime via `replaceVars()` in `src/agent/prompts/index.ts`.
 
 ## Architecture
 

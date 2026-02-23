@@ -1,7 +1,5 @@
 import type { Cache } from "../../boot/cache.js";
-
-const MP_MAX = 100_000;
-export const HP_DAILY_BUDGET = 1; // USD
+import { getConfigNumber } from "../../db/config.js";
 
 export class Vitals {
   private cache: Cache;
@@ -29,15 +27,15 @@ export class Vitals {
   }
 
   getMpRatio(): number {
-    const remaining = Math.max(0, MP_MAX - this.cache.totalTokens);
-    return remaining / MP_MAX;
+    const mpMax = getConfigNumber("session_token_limit");
+    const remaining = Math.max(0, mpMax - this.cache.totalTokens);
+    return mpMax > 0 ? remaining / mpMax : 0;
   }
 
   getHpRatio(): number {
-    return Math.max(
-      0,
-      Math.min(1, (HP_DAILY_BUDGET - this.cache.dailyCost) / HP_DAILY_BUDGET),
-    );
+    const budget = getConfigNumber("daily_budget");
+    if (budget <= 0) return 0;
+    return Math.max(0, Math.min(1, (budget - this.cache.dailyCost) / budget));
   }
 
   setOnChange(cb: () => void): void {

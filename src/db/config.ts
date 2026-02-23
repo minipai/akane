@@ -6,6 +6,8 @@ const DEFAULTS: Record<string, string> = {
   kana_name: "かな",
   user_name: "User",
   user_nickname: "ご主人様",
+  daily_budget: "1",
+  session_token_limit: "100000",
 };
 
 /** Get a config value from DB, falling back to a built-in default. */
@@ -42,6 +44,12 @@ export function setConfig(key: string, value: string): void {
       .values({ key, value, updatedAt: now })
       .run();
   }
+}
+
+/** Get a config value as a number, falling back to a built-in default. */
+export function getConfigNumber(key: string): number {
+  const val = getConfig(key) ?? DEFAULTS[key];
+  return val ? parseFloat(val) : 0;
 }
 
 export function getAllConfig(): Record<string, string> {

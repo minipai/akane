@@ -12,7 +12,7 @@ import type { ChatClient, ChatEntry } from "../src/types.js";
 import type { Cache } from "../src/boot/cache.js";
 import type { SearchClient } from "../src/boot/search.js";
 import { Agent } from "../src/agent/agent.js";
-import { getConfig, setConfig, getAllConfig, getConfigWithDefault } from "../src/db/config.js";
+import { getConfig, setConfig, getAllConfig, getConfigWithDefault, getConfigNumber } from "../src/db/config.js";
 
 // Mock getDb so config module uses the test DB
 let testDb: Db;
@@ -701,6 +701,22 @@ describe("Agent", () => {
       setConfig("kana_name", "Miku");
       expect(getConfigWithDefault("kana_name")).toBe("Miku");
     });
+
+    it("getConfigNumber returns default when unset", () => {
+      expect(getConfigNumber("daily_budget")).toBe(1);
+      expect(getConfigNumber("session_token_limit")).toBe(100000);
+    });
+
+    it("getConfigNumber returns DB value when set", () => {
+      setConfig("daily_budget", "2.5");
+      setConfig("session_token_limit", "50000");
+      expect(getConfigNumber("daily_budget")).toBe(2.5);
+      expect(getConfigNumber("session_token_limit")).toBe(50000);
+    });
+
+    it("getConfigNumber returns 0 for unknown key with no default", () => {
+      expect(getConfigNumber("nonexistent")).toBe(0);
+    });
   });
 
   // ─── update_config tool ──────────────────────────────────────────
@@ -745,6 +761,28 @@ describe("Agent", () => {
 
       expect(getConfig("kana_name")).toBe("Miku");
       expect(getConfig("user_nickname")).toBe("マスター");
+    });
+
+    it("update_config with number params persists to DB", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            {
+              id: "tc1",
+              name: "update_config",
+              args: '{"daily_budget":2.5,"session_token_limit":50000}',
+            },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("Updated!"));
+
+      await agent.run("change budget");
+
+      expect(getConfig("daily_budget")).toBe("2.5");
+      expect(getConfig("session_token_limit")).toBe("50000");
     });
 
     it("update_config with null values are ignored", async () => {

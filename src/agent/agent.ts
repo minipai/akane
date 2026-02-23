@@ -8,7 +8,7 @@ import { tools } from "./tools/index.js";
 import type { SearchClient } from "../boot/search.js";
 import { buildSystemPrompt } from "./prompts/index.js";
 import { setKv } from "../db/kv.js";
-import { getConfig } from "../db/config.js";
+import { getConfig, getConfigWithDefault } from "../db/config.js";
 import { generateNextQuestion } from "./tools/user-facts.js";
 import { Scribe } from "./core/scribe.js";
 import { Vitals } from "./core/vitals.js";
@@ -135,8 +135,9 @@ export class Agent {
   /** Show current persona config and let the user change values. */
   configure(): Promise<string> {
     const fmt = (key: string) => getConfig(key) ?? "(unset)";
+    const fmtDef = (key: string) => getConfigWithDefault(key);
     return this.run(
-      `The user wants to view/change persona settings. Current values:\n- kana_name: ${fmt("kana_name")}\n- user_name: ${fmt("user_name")}\n- user_nickname: ${fmt("user_nickname")}\n\nShow them these current values. Values marked (unset) have not been configured yet — tell the user they are not set. Ask what they'd like to change. If they want to change something, call update_config with the new values. Use the conversation language.`,
+      `The user wants to view/change persona settings. Current values:\n- kana_name: ${fmt("kana_name")}\n- user_name: ${fmt("user_name")}\n- user_nickname: ${fmt("user_nickname")}\n- daily_budget: $${fmtDef("daily_budget")} USD\n- session_token_limit: ${fmtDef("session_token_limit")} tokens\n\nShow them these current values. Values marked (unset) have not been configured yet — tell the user they are not set. Ask what they'd like to change. If they want to change something, call update_config with the new values. Use the conversation language.`,
       { label: "/config  View and change persona settings" },
     );
   }

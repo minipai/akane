@@ -5,16 +5,21 @@ import { setConfig } from "../../db/config.js";
 export const updateConfigToolDef = zodFunction({
   name: "update_config",
   description:
-    "Update persona configuration values. Call this when the user wants to change how they or you are named.",
+    "Update persona configuration values. Call this when the user wants to change how they or you are named, or adjust budget settings.",
   parameters: z.object({
     kana_name: z.string().nullable().optional().describe("Kana's display name"),
     user_name: z.string().nullable().optional().describe("The user's real name"),
     user_nickname: z.string().nullable().optional().describe("How Kana addresses the user"),
+    daily_budget: z.number().nullable().optional().describe("Daily API budget in USD"),
+    session_token_limit: z.number().nullable().optional().describe("Max tokens per session"),
   }),
 });
 
 export function executeUpdateConfig(
-  params: { kana_name?: string; user_name?: string; user_nickname?: string },
+  params: {
+    kana_name?: string; user_name?: string; user_nickname?: string;
+    daily_budget?: number | null; session_token_limit?: number | null;
+  },
   refreshPrompt: () => void,
 ): string {
   const updated: string[] = [];
@@ -30,6 +35,14 @@ export function executeUpdateConfig(
   if (params.user_nickname) {
     setConfig("user_nickname", params.user_nickname);
     updated.push(`user_nickname → ${params.user_nickname}`);
+  }
+  if (params.daily_budget != null) {
+    setConfig("daily_budget", String(params.daily_budget));
+    updated.push(`daily_budget → ${params.daily_budget}`);
+  }
+  if (params.session_token_limit != null) {
+    setConfig("session_token_limit", String(params.session_token_limit));
+    updated.push(`session_token_limit → ${params.session_token_limit}`);
   }
 
   if (updated.length === 0) {

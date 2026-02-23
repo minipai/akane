@@ -46,11 +46,14 @@ function textResponse(content: string) {
   };
 }
 
-function toolCallResponse(calls: Array<{ id: string; name: string; args: string }>) {
+function toolCallResponse(
+  calls: Array<{ id: string; name: string; args: string }>,
+  content: string | null = null,
+) {
   return {
     message: {
       role: "assistant" as const,
-      content: null,
+      content,
       refusal: null,
       annotations: [],
       tool_calls: calls.map((c) => ({
@@ -405,6 +408,239 @@ describe("Agent", () => {
         (m: any) => m.role === "tool" && typeof m.content === "string" && m.content.includes("denied"),
       );
       expect(toolMsg).toBeTruthy();
+    });
+  });
+
+  // ─── Callbacks & accessors ──────────────────────────────────────
+
+  describe("callbacks and accessors", () => {
+    it("setOnEmotionChange fires when emotion tool is called", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      const emotionLog: string[] = [];
+      agent.setOnEmotionChange((e) => emotionLog.push(e));
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc1", name: "set_emotion", args: '{"emotion":"excited"}' },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("Yay!"));
+
+      await agent.run("exciting news");
+      expect(emotionLog).toEqual(["excited"]);
+    });
+
+    it("addInfo() inserts info entries visible in getEntries()", () => {
+      const agent = makeAgent();
+      agent.start();
+
+      agent.addInfo({ kind: "info", label: "test", content: "hello world", ts: Date.now() });
+
+      const entries = agent.getEntries();
+      const info = entries.find((e: any) => e.kind === "info" && e.content === "hello world");
+      expect(info).toBeTruthy();
+    });
+
+    it("vitals tracks tokens from LLM calls", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      vi.mocked(client.chat).mockResolvedValueOnce(textResponse("Hi!"));
+      await agent.run("hello");
+
+      expect(agent.vitals.getTotalTokens()).toBe(50);
+    });
+
+    it("refreshPrompt() updates the system prompt in-place", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      const msgsBefore = agent.getMessages();
+      const systemBefore = (msgsBefore[0] as any).content;
+
+      agent.refreshPrompt();
+
+      const msgsAfter = agent.getMessages();
+      const systemAfter = (msgsAfter[0] as any).content;
+      // Should be a string (rebuilt prompt) — same value since nothing changed,
+      // but the important thing is it didn't crash and is still a valid prompt
+      expect(typeof systemAfter).toBe("string");
+      expect(systemAfter.length).toBeGreaterThan(0);
+    });
+  });
+
+  // ─── Post-rest reset ──────────────────────────────────────────
+
+  describe("post-rest reset", () => {
+    it("run() after rest() starts a fresh session", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      // First conversation
+      vi.mocked(client.chat).mockResolvedValueOnce(textResponse("Hi!"));
+      await agent.run("hello");
+
+      await agent.rest();
+
+      // Second conversation after rest
+      vi.mocked(client.chat).mockResolvedValueOnce(textResponse("Hello again!"));
+      const result = await agent.run("hey");
+      expect(result).toBe("Hello again!");
+
+      // Should have created a second conversation
+      const rows = db.select().from(conversations).all();
+      expect(rows).toHaveLength(2);
+      // First ended, second still open
+      expect(rows.filter((r) => r.endedAt !== null)).toHaveLength(1);
+      expect(rows.filter((r) => r.endedAt === null)).toHaveLength(1);
+    });
+  });
+
+  // ─── Command methods ───────────────────────────────────────────
+
+  describe("command methods", () => {
+    it("introduce() sends intro prompt and returns response", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      vi.mocked(client.chat).mockResolvedValueOnce(textResponse("Hi, I'm Kana!"));
+
+      const result = await agent.introduce();
+      expect(result).toBe("Hi, I'm Kana!");
+
+      // The user message should contain the intro prompt
+      const callArgs = vi.mocked(client.chat).mock.calls[0][0];
+      const userMsgs = callArgs.messages.filter((m: any) => m.role === "user");
+      expect(userMsgs.some((m: any) => m.content.includes("Introduce yourself"))).toBe(true);
+
+      // Entry should carry the /intro label
+      const entries = agent.getEntries();
+      const labeled = entries.find((e: any) => e.label?.includes("/intro"));
+      expect(labeled).toBeTruthy();
+    });
+
+    it("look() sends look prompt and returns response", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      vi.mocked(client.chat).mockResolvedValueOnce(textResponse("*twirls*"));
+
+      const result = await agent.look();
+      expect(result).toBe("*twirls*");
+
+      const callArgs = vi.mocked(client.chat).mock.calls[0][0];
+      const userMsgs = callArgs.messages.filter((m: any) => m.role === "user");
+      expect(userMsgs.some((m: any) => m.content.includes("looks at you"))).toBe(true);
+
+      const entries = agent.getEntries();
+      const labeled = entries.find((e: any) => e.label?.includes("/look"));
+      expect(labeled).toBeTruthy();
+    });
+
+    it("beginRest() sends rest prompt then ends session", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      // First run creates a conversation
+      vi.mocked(client.chat).mockResolvedValueOnce(textResponse("Hi!"));
+      await agent.run("hello");
+
+      // beginRest: LLM says goodbye + calls rest_session (terminal)
+      vi.mocked(client.chat).mockResolvedValueOnce(
+        toolCallResponse(
+          [{ id: "tc1", name: "rest_session", args: '{"description":"Kana curls up."}' }],
+          "Goodnight!",
+        ),
+      );
+
+      await agent.beginRest();
+
+      // Conversation should be ended
+      const rows = db.select().from(conversations).all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0].endedAt).not.toBeNull();
+    });
+
+    it("changeOutfit() persists outfit and sends reaction prompt", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      vi.mocked(client.chat).mockResolvedValueOnce(textResponse("Love this dress!"));
+
+      const result = await agent.changeOutfit("summer dress");
+      expect(result).toBe("Love this dress!");
+
+      const callArgs = vi.mocked(client.chat).mock.calls[0][0];
+      const userMsgs = callArgs.messages.filter((m: any) => m.role === "user");
+      expect(userMsgs.some((m: any) => m.content.includes("summer dress"))).toBe(true);
+
+      const entries = agent.getEntries();
+      const labeled = entries.find((e: any) => e.label?.includes("/outfit"));
+      expect(labeled).toBeTruthy();
+    });
+  });
+
+  // ─── Terminal tool detection ───────────────────────────────────
+
+  describe("terminal tool detection", () => {
+    it("rest_session alone is terminal — stops the loop", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      vi.mocked(client.chat).mockResolvedValueOnce(
+        toolCallResponse(
+          [{ id: "tc1", name: "rest_session", args: '{"description":"resting"}' }],
+          "Bye!",
+        ),
+      );
+
+      const result = await agent.run("rest");
+      expect(result).toBe("Bye!");
+      // Only one LLM call — no follow-up turn
+      expect(client.chat).toHaveBeenCalledTimes(1);
+    });
+
+    it("rest_session + set_emotion together is still terminal", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      vi.mocked(client.chat).mockResolvedValueOnce(
+        toolCallResponse(
+          [
+            { id: "tc1", name: "set_emotion", args: '{"emotion":"happy"}' },
+            { id: "tc2", name: "rest_session", args: '{"description":"resting"}' },
+          ],
+          "Goodnight!",
+        ),
+      );
+
+      const result = await agent.run("rest now");
+      expect(result).toBe("Goodnight!");
+      // Only one LLM call — anyTerminal stops the loop
+      expect(client.chat).toHaveBeenCalledTimes(1);
+    });
+
+    it("message.content from terminal turn is added to entries", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      vi.mocked(client.chat).mockResolvedValueOnce(
+        toolCallResponse(
+          [{ id: "tc1", name: "rest_session", args: '{"description":"curls up"}' }],
+          "Sweet dreams!",
+        ),
+      );
+
+      await agent.run("goodnight");
+
+      const entries = agent.getEntries();
+      const assistantEntries = entries.filter(
+        (e: any) => e.message?.role === "assistant" && e.message.content,
+      );
+      expect(assistantEntries.some((e: any) => e.message.content === "Sweet dreams!")).toBe(true);
     });
   });
 });

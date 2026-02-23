@@ -1,5 +1,5 @@
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
-import type { Message, ChatEntry } from "../types.js";
+import type { Message, ChatEntry } from "../../types.js";
 import type { Memory } from "../memory/memory.js";
 
 export class Scribe {

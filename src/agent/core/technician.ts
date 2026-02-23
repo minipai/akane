@@ -1,4 +1,4 @@
-import type { ToolActivity, ToolApprovalRequest } from "../types.js";
+import type { ToolActivity, ToolApprovalRequest } from "../../types.js";
 import { executeTool, autoApprovedTools } from "../tools/index.js";
 import type { ToolContext } from "../tools/index.js";
 

@@ -1,7 +1,7 @@
 import type { ChatCompletionTool } from "openai/resources/chat/completions";
 import type { Memory } from "../memory/memory.js";
-import type { Cache } from "../boot/cache.js";
-import type { Compressor } from "../types.js";
+import type { Cache } from "../../boot/cache.js";
+import type { Compressor } from "../../types.js";
 
 const CATEGORY_DEFS = [
   { category: "identity",    label: "Identity & Background",    subtopics: ["name", "location", "language", "nationality", "timezone", "demographics"] },

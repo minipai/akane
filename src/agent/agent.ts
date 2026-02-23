@@ -2,19 +2,16 @@ import type { ChatClient } from "../types.js";
 import type { ChatCompletionMessage } from "openai/resources/chat/completions";
 import type { ChatEntry } from "../types.js";
 import type { Db } from "../db/db.js";
-import { Memory } from "../memory/memory.js";
+import { Memory } from "./memory/memory.js";
 import type { Cache } from "../boot/cache.js";
-import { tools } from "../tools/index.js";
-import { buildSystemPrompt } from "../prompts/index.js";
-import { generateNextQuestion } from "../tools/user-facts.js";
-import { Scribe } from "./scribe.js";
-import { Vitals } from "./vitals.js";
-import { Technician } from "./technician.js";
-import { Secretary } from "./secretary.js";
-import type { OnToolActivity, OnToolApproval, OnEmotionChange } from "./technician.js";
-
-export type { OnToolActivity, OnToolApproval, OnEmotionChange };
-export type { ChatEntry, ToolActivity, ToolApprovalRequest } from "../types.js";
+import { tools } from "./tools/index.js";
+import { buildSystemPrompt } from "./prompts/index.js";
+import { generateNextQuestion } from "./tools/user-facts.js";
+import { Scribe } from "./core/scribe.js";
+import { Vitals } from "./core/vitals.js";
+import { Technician } from "./core/technician.js";
+import { Secretary } from "./core/secretary.js";
+import type { OnToolActivity, OnToolApproval, OnEmotionChange } from "./core/technician.js";
 
 const MAX_ITERATIONS = 10;
 

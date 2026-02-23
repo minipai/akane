@@ -1,4 +1,4 @@
-import type { Cache } from "../boot/cache.js";
+import type { Cache } from "../../boot/cache.js";
 
 const MP_MAX = 100_000;
 export const HP_DAILY_BUDGET = 1; // USD

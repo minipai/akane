@@ -1,7 +1,7 @@
 import { eq, desc } from "drizzle-orm";
-import type { Db } from "../db/db.js";
-import { diary } from "../db/schema.js";
-import type { ChatEntry, Compressor } from "../types.js";
+import type { Db } from "../../db/db.js";
+import { diary } from "../../db/schema.js";
+import type { ChatEntry, Compressor } from "../../types.js";
 import type { MemoryContext } from "../prompts/index.js";
 import { generateDiary, type DiaryType } from "./diary.js";
 import * as conv from "./conversations.js";

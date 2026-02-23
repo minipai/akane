@@ -1,7 +1,7 @@
-import type { Compressor } from "../types.js";
+import type { Compressor } from "../../types.js";
 import { and, eq, gte, lt, desc, isNotNull } from "drizzle-orm";
-import type { Db } from "../db/db.js";
-import { diary, conversations } from "../db/schema.js";
+import type { Db } from "../../db/db.js";
+import { diary, conversations } from "../../db/schema.js";
 import {
   yesterday,
   lastISOWeek,
@@ -10,7 +10,7 @@ import {
   lastYear,
   datesInWeek,
   weeksInMonth,
-} from "../utils/date-helpers.js";
+} from "../../utils/date-helpers.js";
 
 export type DiaryType = "daily" | "weekly" | "monthly" | "quarterly" | "yearly";
 

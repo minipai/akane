@@ -1,8 +1,8 @@
 import { randomUUID } from "crypto";
 import { eq, desc, and, isNull, inArray } from "drizzle-orm";
-import type { Db } from "../db/db.js";
-import { conversations, messages } from "../db/schema.js";
-import type { ChatEntry, Message } from "../types.js";
+import type { Db } from "../../db/db.js";
+import { conversations, messages } from "../../db/schema.js";
+import type { ChatEntry, Message } from "../../types.js";
 
 export function createConversation(db: Db): string {
   const id = randomUUID();

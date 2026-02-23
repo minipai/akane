@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Text } from "ink";
-import type { Vitals } from "../agent/vitals.js";
+import type { Vitals } from "../agent/types.js";
 
 const BAR_LENGTH = 10;
 

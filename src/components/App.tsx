@@ -8,7 +8,7 @@ import InputBar from "./InputBar.js";
 import ApprovalBar from "./ApprovalBar.js";
 import StatusBar from "./StatusBar.js";
 import type { Agent } from "../agent/agent.js";
-import type { ChatEntry, ToolActivity, ToolApprovalRequest } from "../agent/agent.js";
+import type { ChatEntry, ToolActivity, ToolApprovalRequest } from "../agent/types.js";
 import type { Dispatch } from "../boot/dispatch.js";
 
 function formatToolArgs(name: string, argsJson: string): string {

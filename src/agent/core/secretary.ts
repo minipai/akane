@@ -1,6 +1,6 @@
-import type { ChatEntry, Compressor } from "../types.js";
+import type { ChatEntry, Compressor } from "../../types.js";
 import type { Memory } from "../memory/memory.js";
-import type { Cache } from "../boot/cache.js";
+import type { Cache } from "../../boot/cache.js";
 
 export class Secretary {
   private memory: Memory;

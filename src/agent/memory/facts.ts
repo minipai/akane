@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import type { Db } from "../db/db.js";
-import { userFacts, userProfile } from "../db/schema.js";
+import type { Db } from "../../db/db.js";
+import { userFacts, userProfile } from "../../db/schema.js";
 
 export type Category = "identity" | "relations" | "career" | "preferences" | "mindset" | "timeline";
 

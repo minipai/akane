@@ -1,7 +1,7 @@
 import type { ChatCompletionTool } from "openai/resources/chat/completions";
 import type { Memory } from "../memory/memory.js";
-import type { Cache } from "../boot/cache.js";
-import type { Compressor } from "../types.js";
+import type { Cache } from "../../boot/cache.js";
+import type { Compressor } from "../../types.js";
 import { shellToolDef, executeShell } from "./shell.js";
 import { emotionToolDef, executeEmotion } from "./emotion.js";
 import {

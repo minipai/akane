@@ -1,6 +1,6 @@
 import type { ChatClient } from "../types.js";
 import type { ChatCompletionMessage } from "openai/resources/chat/completions";
-import type { ChatEntry } from "../types.js";
+import type { ChatEntry, InfoEntry } from "../types.js";
 import type { Db } from "../db/db.js";
 import { Memory } from "./memory/memory.js";
 import type { Cache } from "../boot/cache.js";
@@ -24,6 +24,7 @@ export class Agent {
   readonly vitals: Vitals;
   private technician: Technician;
   private secretary: Secretary;
+  private infos: InfoEntry[] = [];
   private isFirstUserMessage = true;
 
   constructor(client: ChatClient, db: Db, cache: Cache) {
@@ -70,6 +71,7 @@ export class Agent {
 
     // Reset agent immediately so it's ready for the new session
     this.scribe.reset(this.buildPrompt());
+    this.infos = [];
     await this.secretary.rest(currentId, entries);
     // conversationId stays null — lazy init on next message
   }
@@ -92,6 +94,26 @@ export class Agent {
 
   getEntries(): ChatEntry[] {
     return this.scribe.getEntries();
+  }
+
+  getInfos(): InfoEntry[] {
+    return this.infos;
+  }
+
+  async inspect(prompt: string, label: string): Promise<string> {
+    const system = this.buildPrompt();
+    const { message, totalTokens } = await this.client.chat({
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: prompt },
+      ],
+    });
+
+    if (totalTokens) this.vitals.addTokens(totalTokens);
+
+    const content = message?.content ?? "(no response)";
+    this.infos.push({ kind: "info", label, content, ts: Date.now() });
+    return content;
   }
 
   async run(userInput: string, opts?: { label?: string }): Promise<string> {

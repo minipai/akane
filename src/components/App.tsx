@@ -8,7 +8,7 @@ import InputBar from "./InputBar.js";
 import ApprovalBar from "./ApprovalBar.js";
 import StatusBar from "./StatusBar.js";
 import type { Agent } from "../agent/agent.js";
-import type { ChatEntry, ToolActivity, ToolApprovalRequest } from "../agent/types.js";
+import type { ChatEntry, ToolActivity, ToolApprovalRequest, Entry } from "../agent/types.js";
 import type { Dispatch } from "../boot/dispatch.js";
 
 function formatToolArgs(name: string, argsJson: string): string {
@@ -42,7 +42,7 @@ interface Props {
 
 export default function App({ agent, dispatch, model }: Props) {
   const { exit } = useApp();
-  const [entries, setEntries] = useState<ChatEntry[]>(agent.getEntries());
+  const [entries, setEntries] = useState<Entry[]>(agent.getEntries());
   // Show only last 5 pairs (10 messages) on resume; +1 for system prompt entry
   const displayFrom = useRef(Math.max(0, agent.getEntries().length - 10) + 1);
   const [loading, setLoading] = useState(false);
@@ -50,6 +50,11 @@ export default function App({ agent, dispatch, model }: Props) {
   const [pendingApproval, setPendingApproval] =
     useState<ToolApprovalRequest | null>(null);
   const [, setVitalsTick] = useState(0);
+
+  const mergeEntries = useCallback((): Entry[] => {
+    const all: Entry[] = [...agent.getEntries(), ...agent.getInfos()];
+    return all.sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0));
+  }, [agent]);
 
   useEffect(() => {
     agent.setOnToolActivity(setToolActivity);
@@ -65,20 +70,20 @@ export default function App({ agent, dispatch, model }: Props) {
     });
     ev.on("rest:after", () => {
       agent.vitals.setTotalTokens(0);
-      setEntries([...agent.getEntries()]);
+      setEntries(mergeEntries());
     });
     ev.on("chat:command", () => {
-      setEntries([...agent.getEntries()]);
+      setEntries(mergeEntries());
       setLoading(true);
       setToolActivity(null);
     });
     ev.on("chat:before", (text) => {
-      setEntries([...agent.getEntries(), { message: { role: "user", content: text } }]);
+      setEntries([...mergeEntries(), { message: { role: "user", content: text }, ts: Date.now() }]);
       setLoading(true);
       setToolActivity(null);
     });
     ev.on("chat:after", () => {
-      setEntries([...agent.getEntries()]);
+      setEntries(mergeEntries());
       setLoading(false);
       setToolActivity(null);
     });

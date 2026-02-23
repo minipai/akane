@@ -24,6 +24,7 @@ export interface Dispatch {
 export function createDispatch(agent: {
   run(text: string, opts?: { label?: string }): Promise<string>;
   rest(): Promise<void>;
+  inspect(prompt: string, label: string): Promise<string>;
 }): Dispatch {
   const events = new EventEmitter<DispatchEvents>();
 
@@ -31,6 +32,7 @@ export function createDispatch(agent: {
     { name: "quit", description: "Exit the app" },
     { name: "rest", description: "End session and start fresh" },
     { name: "intro", description: "Ask Kana to introduce herself" },
+    { name: "look", description: "Describe Kana's appearance" },
   ];
 
   function handle(text: string): void {
@@ -64,6 +66,19 @@ export function createDispatch(agent: {
         events.emit("chat:command");
         agent
           .run("Introduce yourself — who you are, your personality, and what you can do.", { label: "/intro  Ask Kana to introduce herself" })
+          .then(() => events.emit("chat:after"))
+          .catch((err: unknown) => {
+            const msg = err instanceof Error ? err.message : "Unknown error";
+            events.emit("chat:error", msg);
+          });
+        return;
+      case "look":
+        events.emit("chat:command");
+        agent
+          .inspect(
+            "Write a second-person narrative description of your appearance, clothing, expression, and notable features. Do not write in a conversational tone — write it as descriptive prose. Respond in the conversation language.",
+            "/look  Describe Kana's appearance",
+          )
           .then(() => events.emit("chat:after"))
           .catch((err: unknown) => {
             const msg = err instanceof Error ? err.message : "Unknown error";

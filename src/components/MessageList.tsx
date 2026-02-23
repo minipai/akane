@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, Text } from "ink";
-import type { ChatEntry } from "../types.js";
+import type { ChatEntry, Entry, InfoEntry } from "../types.js";
+import { isInfo } from "../types.js";
 
 const EMOTION_EMOJI: Record<string, string> = {
   neutral: "•ᴗ•",
@@ -29,12 +30,13 @@ function getContent(msg: ChatEntry["message"]): string {
 }
 
 interface Props {
-  entries: ChatEntry[];
+  entries: Entry[];
 }
 
 export default function MessageList({ entries }: Props) {
   const visible = entries.filter(
     (e) =>
+      isInfo(e) ||
       e.label ||
       e.message.role === "user" ||
       e.message.role === "assistant",
@@ -43,6 +45,17 @@ export default function MessageList({ entries }: Props) {
   return (
     <Box flexDirection="column" flexGrow={1}>
       {visible.map((entry, i) => {
+        if (isInfo(entry)) {
+          return (
+            <Box key={i} flexDirection="column" marginBottom={0}>
+              <Text dimColor>{"❯"} {entry.label}</Text>
+              <Box borderStyle="round" borderColor="#555" paddingX={1}>
+                <Text wrap="wrap">{entry.content}</Text>
+              </Box>
+            </Box>
+          );
+        }
+
         const content = getContent(entry.message);
         if (!content) return null;
 

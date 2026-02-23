@@ -42,7 +42,7 @@ export class Scribe {
 
   addMessage(message: ChatCompletionMessageParam, opts?: { label?: string }): void {
     this.messages.push(message);
-    const entry: ChatEntry = { message };
+    const entry: ChatEntry = { message, ts: Date.now() };
     if (message.role === "assistant") {
       entry.emotion = this.currentEmotion;
     }

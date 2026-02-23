@@ -38,7 +38,7 @@ export function getConversationMessages(db: Db, conversationId: string): ChatEnt
 
   return rows.map((row) => {
     const message: Message = { role: row.role as "user" | "assistant", content: row.content ?? "" };
-    const entry: ChatEntry = { message };
+    const entry: ChatEntry = { message, ts: new Date(row.createdAt).getTime() };
     if (row.emotion) entry.emotion = row.emotion;
     if (row.label) entry.label = row.label;
     return entry;

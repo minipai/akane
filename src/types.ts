@@ -22,6 +22,20 @@ export interface ChatEntry {
   message: Message;
   emotion?: string;
   label?: string;
+  ts?: number;
+}
+
+export interface InfoEntry {
+  kind: "info";
+  label: string;
+  content: string;
+  ts: number;
+}
+
+export type Entry = ChatEntry | InfoEntry;
+
+export function isInfo(e: Entry): e is InfoEntry {
+  return "kind" in e && e.kind === "info";
 }
 
 export interface ToolActivity {

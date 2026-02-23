@@ -16,7 +16,7 @@ import { Technician } from "./core/technician.js";
 import { Secretary } from "./core/secretary.js";
 import type { OnToolActivity, OnToolApproval, OnEmotionChange } from "./core/technician.js";
 
-const MAX_ITERATIONS = 10;
+const MAX_ITERATIONS = 25;
 
 export class Agent {
   private client: ChatClient;

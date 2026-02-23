@@ -15,6 +15,7 @@ import { describeAgentToolDef, executeDescribeAgent } from "./describe.js";
 import { restSessionToolDef, executeRestSession } from "./rest.js";
 import { searchToolDef, executeSearch } from "./search.js";
 import { updateConfigToolDef, executeUpdateConfig } from "./config.js";
+import { thinkToolDef, executeThink } from "./think.js";
 import type { SearchClient } from "../../boot/search.js";
 
 export interface ToolContext {
@@ -37,6 +38,7 @@ export const tools = [
   restSessionToolDef,
   searchToolDef,
   updateConfigToolDef,
+  thinkToolDef,
 ];
 
 /** Tools that don't need a follow-up LLM call — their output is the final response. */
@@ -52,6 +54,7 @@ export const autoApprovedTools = new Set([
   "rest_session",
   "web_search",
   "update_config",
+  "think",
 ]);
 
 export async function executeTool(
@@ -81,6 +84,8 @@ export async function executeTool(
       return executeSearch(parsed.query, ctx.search);
     case "update_config":
       return executeUpdateConfig(parsed, ctx.refreshPrompt ?? (() => {}));
+    case "think":
+      return executeThink();
     default:
       return `Unknown tool: ${name}`;
   }

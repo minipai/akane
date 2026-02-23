@@ -251,8 +251,8 @@ describe("Agent", () => {
 
       const result = await agent.run("loop forever");
       expect(result).toBe("(max iterations reached)");
-      // 10 iterations = 10 LLM calls
-      expect(client.chat).toHaveBeenCalledTimes(10);
+      // 25 iterations = 25 LLM calls
+      expect(client.chat).toHaveBeenCalledTimes(25);
     });
 
     it("null response returns '(no response)'", async () => {
@@ -766,6 +766,102 @@ describe("Agent", () => {
 
       const userDbRows = db.select().from(messages).all().filter((r) => r.role === "user");
       expect(userDbRows).toHaveLength(1);
+    });
+  });
+
+  // ─── Think tool ─────────────────────────────────────────────────
+
+  describe("think tool", () => {
+    it("think is auto-approved (no approval callback)", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      const approvalCb = vi.fn();
+      agent.setOnToolApproval(approvalCb);
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc1", name: "think", args: '{"thought":"Let me plan this out..."}' },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("Here's my plan."));
+
+      await agent.run("do something complex");
+      expect(approvalCb).not.toHaveBeenCalled();
+    });
+
+    it("think tool is silent (no activity callback)", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      const activityLog: any[] = [];
+      agent.setOnToolActivity((a) => activityLog.push(a));
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc1", name: "think", args: '{"thought":"Planning..."}' },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("Done thinking."));
+
+      await agent.run("plan something");
+      expect(activityLog.filter((a) => a.name === "think")).toHaveLength(0);
+    });
+
+    it("think tool returns OK", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc1", name: "think", args: '{"thought":"Hmm..."}' },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("Thought about it."));
+
+      await agent.run("think about this");
+
+      const msgs = agent.getMessages();
+      const toolMsg = msgs.find(
+        (m: any) => m.role === "tool" && m.content === "OK",
+      );
+      expect(toolMsg).toBeTruthy();
+    });
+
+    it("multi-step flow: think → shell → think → answer", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      agent.setOnToolApproval(({ resolve }) => resolve(true));
+
+      vi.mocked(client.chat)
+        // Step 1: think about the plan
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc1", name: "think", args: '{"thought":"I need to list files first"}' },
+          ]),
+        )
+        // Step 2: execute shell command
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc2", name: "shell", args: '{"command":"ls src/"}' },
+          ]),
+        )
+        // Step 3: think about results
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc3", name: "think", args: '{"thought":"Found the files, now I can answer"}' },
+          ]),
+        )
+        // Step 4: final answer
+        .mockResolvedValueOnce(textResponse("Here are the files I found."));
+
+      const result = await agent.run("what files are in src?");
+      expect(result).toBe("Here are the files I found.");
+      expect(client.chat).toHaveBeenCalledTimes(4);
     });
   });
 

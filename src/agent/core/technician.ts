@@ -8,7 +8,7 @@ export type OnToolApproval = (request: ToolApprovalRequest) => void;
 export type OnEmotionChange = (emotion: string) => void;
 
 /** Tools that run silently (no activity panel shown). */
-const silentTools = new Set(["set_emotion", "describe_agent", "rest_session", "update_config"]);
+const silentTools = new Set(["set_emotion", "describe_agent", "rest_session", "update_config", "think"]);
 
 
 interface ToolResult {

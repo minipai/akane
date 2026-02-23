@@ -1,26 +1,17 @@
-import type { ChatCompletionTool } from "openai/resources/chat/completions";
+import { z } from "zod";
+import { zodFunction } from "openai/helpers/zod";
 import type { InfoEntry } from "../../types.js";
 
-export const describeAgentToolDef: ChatCompletionTool = {
-  type: "function",
-  function: {
-    name: "describe_agent",
-    description:
-      "Render a descriptive info block about your appearance. Call this when the user looks at you.",
-    parameters: {
-      type: "object",
-      properties: {
-        description: {
-          type: "string",
-          description:
-            "Second-person narrative description of your appearance, clothing, expression, and features.",
-        },
-      },
-      required: ["description"],
-      additionalProperties: false,
-    },
-  },
-};
+export const describeAgentToolDef = zodFunction({
+  name: "describe_agent",
+  description:
+    "Render a descriptive info block about your appearance. Call this when the user looks at you.",
+  parameters: z.object({
+    description: z.string().describe(
+      "Second-person narrative description of your appearance, clothing, expression, and features.",
+    ),
+  }),
+});
 
 export function executeDescribeAgent(
   description: string,

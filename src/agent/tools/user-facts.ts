@@ -1,4 +1,5 @@
-import type { ChatCompletionTool } from "openai/resources/chat/completions";
+import { z } from "zod";
+import { zodFunction } from "openai/helpers/zod";
 import type { Memory } from "../memory/memory.js";
 import type { Cache } from "../../boot/cache.js";
 import type { Compressor } from "../../types.js";
@@ -13,82 +14,45 @@ const CATEGORY_DEFS = [
 ] as const;
 
 type Category = (typeof CATEGORY_DEFS)[number]["category"];
-const CATEGORIES = CATEGORY_DEFS.map((d) => d.category);
-const CATEGORY_LABELS = Object.fromEntries(CATEGORY_DEFS.map((d) => [d.category, d.label])) as Record<Category, string>;
-const SUBTOPICS = Object.fromEntries(CATEGORY_DEFS.map((d) => [d.category, d.subtopics as unknown as string[]])) as Record<Category, string[]>;
+const categoryNames = CATEGORY_DEFS.map((d) => d.category) as [Category, ...Category[]];
+
+function findDef(category: Category) {
+  return CATEGORY_DEFS.find((d) => d.category === category)!;
+}
+
 import type { ToolContext } from "./index.js";
 
-export const noteAboutUserToolDef: ChatCompletionTool = {
-  type: "function",
-  function: {
-    name: "note_about_user",
-    description:
-      "Remember a fact about the user. Call this when the user mentions personal details, preferences, or stable traits worth remembering long-term.",
-    parameters: {
-      type: "object",
-      properties: {
-        category: {
-          type: "string",
-          enum: [...CATEGORIES],
-          description:
-            "identity (demographics), relations (family/pets), career (job/skills), preferences (hobbies/food), mindset (personality/beliefs), timeline (milestones/plans)",
-        },
-        fact: {
-          type: "string",
-          description: "The fact to remember, written as a concise statement",
-        },
-      },
-      required: ["category", "fact"],
-    },
-  },
-};
+export const noteAboutUserToolDef = zodFunction({
+  name: "note_about_user",
+  description:
+    "Remember a fact about the user. Call this when the user mentions personal details, preferences, or stable traits worth remembering long-term.",
+  parameters: z.object({
+    category: z.enum(categoryNames).describe(
+      "identity (demographics), relations (family/pets), career (job/skills), preferences (hobbies/food), mindset (personality/beliefs), timeline (milestones/plans)",
+    ),
+    fact: z.string().describe("The fact to remember, written as a concise statement"),
+  }),
+});
 
-export const getUserFactsToolDef: ChatCompletionTool = {
-  type: "function",
-  function: {
-    name: "get_user_facts",
-    description:
-      "Retrieve all remembered facts about the user for a given category. Use when you need detailed recall about a topic.",
-    parameters: {
-      type: "object",
-      properties: {
-        category: {
-          type: "string",
-          enum: [...CATEGORIES],
-          description: "The category to retrieve facts for",
-        },
-      },
-      required: ["category"],
-    },
-  },
-};
+export const getUserFactsToolDef = zodFunction({
+  name: "get_user_facts",
+  description:
+    "Retrieve all remembered facts about the user for a given category. Use when you need detailed recall about a topic.",
+  parameters: z.object({
+    category: z.enum(categoryNames).describe("The category to retrieve facts for"),
+  }),
+});
 
-export const updateUserFactToolDef: ChatCompletionTool = {
-  type: "function",
-  function: {
-    name: "update_user_fact",
-    description:
-      "Update or delete an existing fact about the user. Use when the user corrects something or when a fact is outdated.",
-    parameters: {
-      type: "object",
-      properties: {
-        id: {
-          type: "number",
-          description: "The ID of the fact to update or delete",
-        },
-        fact: {
-          type: "string",
-          description: "The updated fact text (omit if deleting)",
-        },
-        delete: {
-          type: "boolean",
-          description: "Set to true to delete the fact",
-        },
-      },
-      required: ["id"],
-    },
-  },
-};
+export const updateUserFactToolDef = zodFunction({
+  name: "update_user_fact",
+  description:
+    "Update or delete an existing fact about the user. Use when the user corrects something or when a fact is outdated.",
+  parameters: z.object({
+    id: z.number().describe("The ID of the fact to update or delete"),
+    fact: z.string().nullable().optional().describe("The updated fact text (omit if deleting)"),
+    delete: z.boolean().nullable().optional().describe("Set to true to delete the fact"),
+  }),
+});
 
 async function regenerateProfile(
   memory: Memory,
@@ -105,7 +69,7 @@ async function regenerateProfile(
   const factList = facts.map((f) => `- ${f.fact}`).join("\n");
   const summary = await compress(
     `Summarize the following facts about a user into a concise profile paragraph (2-4 sentences). ` +
-    `Category: ${CATEGORY_LABELS[category]}. Write in third person. ` +
+    `Category: ${findDef(category).label}. Write in third person. ` +
     `Reply with ONLY the summary, nothing else.`,
     factList,
   );
@@ -120,10 +84,10 @@ export async function generateNextQuestion(
   cache: Cache,
   compress: Compressor,
 ): Promise<void> {
-  const category = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
-  const subs = SUBTOPICS[category];
-  const topic = subs[Math.floor(Math.random() * subs.length)];
+  const def = CATEGORY_DEFS[Math.floor(Math.random() * CATEGORY_DEFS.length)];
+  const topic = def.subtopics[Math.floor(Math.random() * def.subtopics.length)];
 
+  const category = def.category;
   const profiles = memory.getAllProfiles();
   const known = profiles[category];
 

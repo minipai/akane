@@ -1,27 +1,18 @@
 import { exec } from "child_process";
-import type { ChatCompletionTool } from "openai/resources/chat/completions";
+import { z } from "zod";
+import { zodFunction } from "openai/helpers/zod";
 
 const MAX_OUTPUT = 4000;
 const TIMEOUT_MS = 30_000;
 
-export const shellToolDef: ChatCompletionTool = {
-  type: "function",
-  function: {
-    name: "shell",
-    description:
-      "Execute a shell command and return its output. Use this to run CLI commands, inspect files, check system state, etc.",
-    parameters: {
-      type: "object",
-      properties: {
-        command: {
-          type: "string",
-          description: "The shell command to execute",
-        },
-      },
-      required: ["command"],
-    },
-  },
-};
+export const shellToolDef = zodFunction({
+  name: "shell",
+  description:
+    "Execute a shell command and return its output. Use this to run CLI commands, inspect files, check system state, etc.",
+  parameters: z.object({
+    command: z.string().describe("The shell command to execute"),
+  }),
+});
 
 export function executeShell(command: string): Promise<string> {
   return new Promise((resolve) => {

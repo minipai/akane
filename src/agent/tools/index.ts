@@ -1,4 +1,3 @@
-import type { ChatCompletionTool } from "openai/resources/chat/completions";
 import type { Memory } from "../memory/memory.js";
 import type { Cache } from "../../boot/cache.js";
 import type { Compressor, InfoEntry } from "../../types.js";
@@ -23,7 +22,7 @@ export interface ToolContext {
   onRest?: () => void;
 }
 
-export const tools: ChatCompletionTool[] = [
+export const tools = [
   shellToolDef,
   emotionToolDef,
   noteAboutUserToolDef,

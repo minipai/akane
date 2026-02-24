@@ -5,13 +5,15 @@ import { zodFunction } from "openai/helpers/zod";
 const MAX_OUTPUT = 4000;
 const TIMEOUT_MS = 30_000;
 
+export const shellSchema = z.object({
+  command: z.string().describe("The shell command to execute"),
+});
+
 export const shellToolDef = zodFunction({
   name: "shell",
   description:
     "Execute a shell command and return its output. Use this to run CLI commands, inspect files, check system state, etc.",
-  parameters: z.object({
-    command: z.string().describe("The shell command to execute"),
-  }),
+  parameters: shellSchema,
 });
 
 export function executeShell(command: string): Promise<string> {

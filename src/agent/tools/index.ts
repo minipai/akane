@@ -1,27 +1,44 @@
 import type { Memory } from "../memory/memory.js";
 import type { Cache } from "../../boot/cache.js";
 import type { Compressor, InfoEntry, ToolDef } from "../../types.js";
-import { shellToolDef, executeShell } from "./shell.js";
-import { emotionToolDef, executeEmotion } from "./emotion.js";
+import { shellToolDef, shellSchema, executeShell } from "./shell.js";
+import { emotionToolDef, emotionSchema, executeEmotion } from "./emotion.js";
 import {
   noteAboutUserToolDef,
+  noteAboutUserSchema,
   getUserFactsToolDef,
+  getUserFactsSchema,
   updateUserFactToolDef,
+  updateUserFactSchema,
   executeNoteAboutUser,
   executeGetUserFacts,
   executeUpdateUserFact,
 } from "./user-facts.js";
-import { describeAgentToolDef, executeDescribeAgent } from "./describe.js";
-import { restSessionToolDef, executeRestSession } from "./rest.js";
-import { updateConfigToolDef, executeUpdateConfig } from "./config.js";
+import {
+  describeAgentToolDef,
+  describeAgentSchema,
+  executeDescribeAgent,
+} from "./describe.js";
+import {
+  restSessionToolDef,
+  restSessionSchema,
+  executeRestSession,
+} from "./rest.js";
+import {
+  updateConfigToolDef,
+  updateConfigSchema,
+  executeUpdateConfig,
+} from "./config.js";
 import { thinkToolDef, executeThink } from "./think.js";
 import {
   readFileToolDef,
+  readFileSchema,
   writeFileToolDef,
+  writeFileSchema,
   executeReadFile,
   executeWriteFile,
 } from "./file.js";
-import { recallToolDef, executeRecall } from "./recall.js";
+import { recallToolDef, recallSchema, executeRecall } from "./recall.js";
 
 export interface ToolContext {
   memory: Memory;
@@ -69,34 +86,63 @@ export async function executeTool(
   args: string,
   ctx: ToolContext,
 ): Promise<string> {
-  const parsed = JSON.parse(args);
-
   switch (name) {
-    case "shell":
-      return executeShell(parsed.command);
-    case "set_emotion":
-      return executeEmotion(parsed.emotion);
-    case "note_about_user":
-      return executeNoteAboutUser(parsed.category, parsed.fact, ctx);
-    case "get_user_facts":
-      return executeGetUserFacts(parsed.category, ctx);
-    case "update_user_fact":
-      return executeUpdateUserFact(parsed.id, parsed.fact, parsed.delete, ctx);
-    case "describe_agent":
-      return executeDescribeAgent(parsed.description, ctx.addInfo);
-    case "rest_session":
+    case "shell": {
+      const { command } = shellSchema.parse(JSON.parse(args));
+      return executeShell(command);
+    }
+    case "set_emotion": {
+      const { emotion } = emotionSchema.parse(JSON.parse(args));
+      return executeEmotion(emotion);
+    }
+    case "note_about_user": {
+      const { category, fact } = noteAboutUserSchema.parse(JSON.parse(args));
+      return executeNoteAboutUser(category, fact, ctx);
+    }
+    case "get_user_facts": {
+      const { category } = getUserFactsSchema.parse(JSON.parse(args));
+      return executeGetUserFacts(category, ctx);
+    }
+    case "update_user_fact": {
+      const {
+        id,
+        fact,
+        delete: del,
+      } = updateUserFactSchema.parse(JSON.parse(args));
+      return executeUpdateUserFact(
+        id,
+        fact ?? undefined,
+        del ?? undefined,
+        ctx,
+      );
+    }
+    case "describe_agent": {
+      const { description } = describeAgentSchema.parse(JSON.parse(args));
+      return executeDescribeAgent(description, ctx.addInfo);
+    }
+    case "rest_session": {
+      const { description } = restSessionSchema.parse(JSON.parse(args));
       ctx.onRest?.();
-      return executeRestSession(parsed.description, ctx.addInfo);
-    case "update_config":
+      return executeRestSession(description, ctx.addInfo);
+    }
+    case "update_config": {
+      const parsed = updateConfigSchema.parse(JSON.parse(args));
       return executeUpdateConfig(parsed, ctx.refreshPrompt ?? (() => {}));
+    }
     case "think":
       return executeThink();
-    case "read_file":
-      return executeReadFile(parsed.path);
-    case "write_file":
-      return executeWriteFile(parsed.path, parsed.content);
-    case "recall":
-      return executeRecall(parsed.query, ctx);
+    case "read_file": {
+      const { path } = readFileSchema.parse(JSON.parse(args));
+      return executeReadFile(path);
+    }
+    case "write_file": {
+      const { path, content } = writeFileSchema.parse(JSON.parse(args));
+      return executeWriteFile(path, content);
+    }
+    case "recall": {
+      const { query } = recallSchema.parse(JSON.parse(args));
+      return executeRecall(query, ctx);
+    }
     default:
       return `Unknown tool: ${name}`;
   }

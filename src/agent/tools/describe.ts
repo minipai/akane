@@ -2,15 +2,17 @@ import { z } from "zod";
 import { zodFunction } from "openai/helpers/zod";
 import type { InfoEntry } from "../../types.js";
 
+export const describeAgentSchema = z.object({
+  description: z.string().describe(
+    "Second-person narrative description of your appearance, clothing, expression, and features.",
+  ),
+});
+
 export const describeAgentToolDef = zodFunction({
   name: "describe_agent",
   description:
     "Render a descriptive info block about your appearance. Call this when the user looks at you.",
-  parameters: z.object({
-    description: z.string().describe(
-      "Second-person narrative description of your appearance, clothing, expression, and features.",
-    ),
-  }),
+  parameters: describeAgentSchema,
 });
 
 export function executeDescribeAgent(

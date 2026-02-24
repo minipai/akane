@@ -2,24 +2,25 @@ import { z } from "zod";
 import { zodFunction } from "openai/helpers/zod";
 import { setConfig } from "../../db/config.js";
 
+export const updateConfigSchema = z.object({
+  kana_name: z.string().nullable().optional().describe("Kana's display name"),
+  user_name: z.string().nullable().optional().describe("The user's real name"),
+  user_nickname: z.string().nullable().optional().describe("How Kana addresses the user"),
+  daily_budget: z.number().nullable().optional().describe("Daily API budget in USD"),
+  session_token_limit: z.number().nullable().optional().describe("Max tokens per session"),
+});
+
 export const updateConfigToolDef = zodFunction({
   name: "update_config",
   description:
     "Update persona configuration values. Call this when the user wants to change how they or you are named, or adjust budget settings.",
-  parameters: z.object({
-    kana_name: z.string().nullable().optional().describe("Kana's display name"),
-    user_name: z.string().nullable().optional().describe("The user's real name"),
-    user_nickname: z.string().nullable().optional().describe("How Kana addresses the user"),
-    daily_budget: z.number().nullable().optional().describe("Daily API budget in USD"),
-    session_token_limit: z.number().nullable().optional().describe("Max tokens per session"),
-  }),
+  parameters: updateConfigSchema,
 });
 
+import type { z } from "zod";
+
 export function executeUpdateConfig(
-  params: {
-    kana_name?: string; user_name?: string; user_nickname?: string;
-    daily_budget?: number | null; session_token_limit?: number | null;
-  },
+  params: z.infer<typeof updateConfigSchema>,
   refreshPrompt: () => void,
 ): string {
   const updated: string[] = [];

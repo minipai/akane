@@ -22,36 +22,42 @@ function findDef(category: Category) {
 
 import type { ToolContext } from "./index.js";
 
+export const noteAboutUserSchema = z.object({
+  category: z.enum(categoryNames).describe(
+    "identity (demographics), relations (family/pets), career (job/skills), preferences (hobbies/food), mindset (personality/beliefs), timeline (milestones/plans)",
+  ),
+  fact: z.string().describe("The fact to remember, written as a concise statement"),
+});
+
 export const noteAboutUserToolDef = zodFunction({
   name: "note_about_user",
   description:
     "Remember a fact about the user. Call this when the user mentions personal details, preferences, or stable traits worth remembering long-term.",
-  parameters: z.object({
-    category: z.enum(categoryNames).describe(
-      "identity (demographics), relations (family/pets), career (job/skills), preferences (hobbies/food), mindset (personality/beliefs), timeline (milestones/plans)",
-    ),
-    fact: z.string().describe("The fact to remember, written as a concise statement"),
-  }),
+  parameters: noteAboutUserSchema,
+});
+
+export const getUserFactsSchema = z.object({
+  category: z.enum(categoryNames).describe("The category to retrieve facts for"),
 });
 
 export const getUserFactsToolDef = zodFunction({
   name: "get_user_facts",
   description:
     "Retrieve all remembered facts about the user for a given category. Use when you need detailed recall about a topic.",
-  parameters: z.object({
-    category: z.enum(categoryNames).describe("The category to retrieve facts for"),
-  }),
+  parameters: getUserFactsSchema,
+});
+
+export const updateUserFactSchema = z.object({
+  id: z.number().describe("The ID of the fact to update or delete"),
+  fact: z.string().nullable().optional().describe("The updated fact text (omit if deleting)"),
+  delete: z.boolean().nullable().optional().describe("Set to true to delete the fact"),
 });
 
 export const updateUserFactToolDef = zodFunction({
   name: "update_user_fact",
   description:
     "Update or delete an existing fact about the user. Use when the user corrects something or when a fact is outdated.",
-  parameters: z.object({
-    id: z.number().describe("The ID of the fact to update or delete"),
-    fact: z.string().nullable().optional().describe("The updated fact text (omit if deleting)"),
-    delete: z.boolean().nullable().optional().describe("Set to true to delete the fact"),
-  }),
+  parameters: updateUserFactSchema,
 });
 
 async function regenerateProfile(

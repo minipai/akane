@@ -5,23 +5,27 @@ import { zodFunction } from "openai/helpers/zod";
 
 const MAX_OUTPUT = 4000;
 
+export const readFileSchema = z.object({
+  path: z.string().describe("The file path to read"),
+});
+
 export const readFileToolDef = zodFunction({
   name: "read_file",
   description:
     "Read the contents of a file at the given path. Returns the file content as text.",
-  parameters: z.object({
-    path: z.string().describe("The file path to read"),
-  }),
+  parameters: readFileSchema,
+});
+
+export const writeFileSchema = z.object({
+  path: z.string().describe("The file path to write to"),
+  content: z.string().describe("The content to write"),
 });
 
 export const writeFileToolDef = zodFunction({
   name: "write_file",
   description:
     "Write content to a file at the given path. Creates parent directories if needed. Overwrites existing files.",
-  parameters: z.object({
-    path: z.string().describe("The file path to write to"),
-    content: z.string().describe("The content to write"),
-  }),
+  parameters: writeFileSchema,
 });
 
 export async function executeReadFile(path: string): Promise<string> {

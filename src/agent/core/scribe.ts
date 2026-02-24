@@ -48,8 +48,8 @@ export class Scribe {
   }
 
   addMessage(message: Message): void {
-    // Status messages are display-only — don't send to LLM
-    if (message.role !== "status") this.messages.push(message);
+    // Status and error messages are display-only — don't send to LLM
+    if (message.role !== "status" && message.role !== "error") this.messages.push(message);
     const entry: ChatEntry = { message, ts: Date.now() };
     if (message.role === "assistant") {
       entry.emotion = this.currentEmotion;
@@ -70,7 +70,7 @@ export class Scribe {
 
   hydrate(entries: ChatEntry[]): void {
     for (const entry of entries) {
-      if (entry.message.role !== "status") this.messages.push(entry.message);
+      if (entry.message.role !== "status" && entry.message.role !== "error") this.messages.push(entry.message);
       this.entries.push(entry);
       if (entry.message.role === "assistant" && entry.emotion) {
         this.currentEmotion = entry.emotion;

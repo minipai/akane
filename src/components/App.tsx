@@ -109,7 +109,7 @@ export default function App({ agent, dispatch, model }: Props) {
     ev.on("chat:error", (errMsg) => {
       setEntries((prev) => [
         ...prev,
-        { message: { role: "assistant", content: `Error: ${errMsg}` } },
+        { message: { role: "error", content: errMsg } },
       ]);
       setLoading(false);
       setToolActivity(null);

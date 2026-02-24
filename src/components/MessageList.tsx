@@ -36,7 +36,8 @@ export default function MessageList({ entries }: Props) {
       isInfo(e) ||
       e.message.role === "user" ||
       e.message.role === "assistant" ||
-      e.message.role === "status",
+      e.message.role === "status" ||
+      e.message.role === "error",
   );
 
   return (
@@ -56,6 +57,14 @@ export default function MessageList({ entries }: Props) {
           return (
             <Box key={i} marginBottom={0}>
               <Text dimColor>{entry.message.content}</Text>
+            </Box>
+          );
+        }
+
+        if (entry.message.role === "error") {
+          return (
+            <Box key={i} marginBottom={0}>
+              <Text color="red">Error: {entry.message.content}</Text>
             </Box>
           );
         }

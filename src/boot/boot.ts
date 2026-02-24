@@ -19,13 +19,17 @@ process.on("unhandledRejection", (err) => {
 export type { Dispatch };
 
 export function boot(): { agent: Agent; model: string; dispatch: Dispatch } {
-  const { client, model } = createClient(config);
-  const db = getDb();
-  const cache = createCache();
-  let agent: Agent;
   try {
-    agent = new Agent(client, db, cache);
+    if (!config.apiKey) {
+      throw new Error("OPENAI_API_KEY is not set. Add it to your .env file.");
+    }
+    const { client, model } = createClient(config);
+    const db = getDb();
+    const cache = createCache();
+    const agent = new Agent(client, db, cache);
     agent.start();
+    const dispatch = createDispatch(agent);
+    return { agent, model, dispatch };
   } catch (err) {
     const ts = new Date().toISOString();
     const msg = err instanceof Error ? err.stack ?? err.message : String(err);
@@ -34,6 +38,4 @@ export function boot(): { agent: Agent; model: string; dispatch: Dispatch } {
     console.error(`Error: ${short}\nLog: ${LOG_PATH}`);
     process.exit(1);
   }
-  const dispatch = createDispatch(agent);
-  return { agent, model, dispatch };
 }

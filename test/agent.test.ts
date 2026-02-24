@@ -518,15 +518,15 @@ describe("Agent", () => {
       const result = await agent.introduce();
       expect(result).toBe("Hi, I'm Kana!");
 
-      // The user message should contain the intro prompt
+      // The developer message should contain the intro prompt
       const callArgs = vi.mocked(client.chat).mock.calls[0][0];
-      const userMsgs = callArgs.messages.filter((m: any) => m.role === "user");
-      expect(userMsgs.some((m: any) => m.content.includes("Introduce yourself"))).toBe(true);
+      const devMsgs = callArgs.messages.filter((m: any) => m.role === "developer");
+      expect(devMsgs.some((m: any) => m.content.includes("Introduce yourself"))).toBe(true);
 
       // Entry should carry the /intro label
       const entries = agent.getEntries();
-      const labeled = entries.find((e: any) => e.label?.includes("/intro"));
-      expect(labeled).toBeTruthy();
+      const status = entries.find((e: any) => e.message?.role === "status" && e.message?.content?.includes("/intro"));
+      expect(status).toBeTruthy();
     });
 
     it("look() sends look prompt and returns response", async () => {
@@ -539,12 +539,12 @@ describe("Agent", () => {
       expect(result).toBe("*twirls*");
 
       const callArgs = vi.mocked(client.chat).mock.calls[0][0];
-      const userMsgs = callArgs.messages.filter((m: any) => m.role === "user");
-      expect(userMsgs.some((m: any) => m.content.includes("looks at you"))).toBe(true);
+      const devMsgs = callArgs.messages.filter((m: any) => m.role === "developer");
+      expect(devMsgs.some((m: any) => m.content.includes("looks at you"))).toBe(true);
 
       const entries = agent.getEntries();
-      const labeled = entries.find((e: any) => e.label?.includes("/look"));
-      expect(labeled).toBeTruthy();
+      const status = entries.find((e: any) => e.message?.role === "status" && e.message?.content?.includes("/look"));
+      expect(status).toBeTruthy();
     });
 
     it("beginRest() adds tip entry and ends session without LLM call", async () => {
@@ -586,12 +586,12 @@ describe("Agent", () => {
       expect(result).toBe("Love this dress!");
 
       const callArgs = vi.mocked(client.chat).mock.calls[0][0];
-      const userMsgs = callArgs.messages.filter((m: any) => m.role === "user");
-      expect(userMsgs.some((m: any) => m.content.includes("summer dress"))).toBe(true);
+      const devMsgs = callArgs.messages.filter((m: any) => m.role === "developer");
+      expect(devMsgs.some((m: any) => m.content.includes("summer dress"))).toBe(true);
 
       const entries = agent.getEntries();
-      const labeled = entries.find((e: any) => e.label?.includes("/outfit"));
-      expect(labeled).toBeTruthy();
+      const status = entries.find((e: any) => e.message?.role === "status" && e.message?.content?.includes("/outfit"));
+      expect(status).toBeTruthy();
     });
   });
 
@@ -1028,8 +1028,8 @@ describe("Agent", () => {
       await agent.configure();
 
       const callArgs = vi.mocked(client.chat).mock.calls[0][0];
-      const userMsgs = callArgs.messages.filter((m: any) => m.role === "user");
-      const configMsg = userMsgs.find(
+      const devMsgs = callArgs.messages.filter((m: any) => m.role === "developer");
+      const configMsg = devMsgs.find(
         (m: any) =>
           m.content.includes("kana_name") &&
           m.content.includes("かな") &&
@@ -1048,8 +1048,8 @@ describe("Agent", () => {
       await agent.configure();
 
       const entries = agent.getEntries();
-      const labeled = entries.find((e: any) => e.label?.includes("/config"));
-      expect(labeled).toBeTruthy();
+      const status = entries.find((e: any) => e.message?.role === "status" && e.message?.content?.includes("/config"));
+      expect(status).toBeTruthy();
     });
   });
 

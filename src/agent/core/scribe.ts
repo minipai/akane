@@ -47,14 +47,13 @@ export class Scribe {
     this.currentEmotion = emotion;
   }
 
-  addMessage(message: Message, opts?: { label?: string }): void {
+  addMessage(message: Message): void {
     // Status messages are display-only — don't send to LLM
     if (message.role !== "status") this.messages.push(message);
     const entry: ChatEntry = { message, ts: Date.now() };
     if (message.role === "assistant") {
       entry.emotion = this.currentEmotion;
     }
-    if (opts?.label) entry.label = opts.label;
     this.entries.push(entry);
 
     if (this.conversationId) {
@@ -66,6 +65,11 @@ export class Scribe {
 
   pushRaw(message: Message): void {
     this.messages.push(message);
+    if (this.conversationId) {
+      try {
+        this.memory.saveMessage(this.conversationId, { message, ts: Date.now() });
+      } catch {}
+    }
   }
 
   hydrate(entries: ChatEntry[]): void {

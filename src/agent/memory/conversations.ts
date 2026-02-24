@@ -40,7 +40,6 @@ export function getConversationMessages(db: Db, conversationId: string): ChatEnt
     const message: Message = { role: row.role as Message["role"], content: row.content ?? "" };
     const entry: ChatEntry = { message, ts: new Date(row.createdAt).getTime() };
     if (row.emotion) entry.emotion = row.emotion;
-    if (row.label) entry.label = row.label;
     return entry;
   });
 }
@@ -61,7 +60,7 @@ export function saveMessage(db: Db, conversationId: string, entry: ChatEntry): v
       role,
       content,
       emotion: entry.emotion ?? null,
-      label: entry.label ?? null,
+      label: null,
       toolCalls,
       createdAt: new Date().toISOString(),
     })

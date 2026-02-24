@@ -34,7 +34,6 @@ export default function MessageList({ entries }: Props) {
   const visible = entries.filter(
     (e) =>
       isInfo(e) ||
-      e.label ||
       e.message.role === "user" ||
       e.message.role === "assistant" ||
       e.message.role === "status",
@@ -63,14 +62,6 @@ export default function MessageList({ entries }: Props) {
 
         const content = getContent(entry.message);
         if (!content) return null;
-
-        if (entry.label) {
-          return (
-            <Box key={i} marginBottom={0}>
-              <Text dimColor>{"❯"} {entry.label}</Text>
-            </Box>
-          );
-        }
 
         const isAssistant = entry.message.role === "assistant";
         const emoji = entry.emotion ? EMOTION_EMOJI[entry.emotion] : undefined;

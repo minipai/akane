@@ -108,16 +108,18 @@ export class Agent {
 
   /** Introduce yourself. */
   introduce(): Promise<string> {
-    return this.run("Introduce yourself — who you are, your personality, and what you can do.", {
-      label: "/intro  Ask Kana to introduce herself",
-    });
+    this.ensureConversation();
+    this.scribe.addMessage({ role: "status", content: "/intro  Ask Kana to introduce herself" });
+    return this.run("Introduce yourself — who you are, your personality, and what you can do.", { hidden: true });
   }
 
   /** Describe appearance for /look. */
   look(): Promise<string> {
+    this.ensureConversation();
+    this.scribe.addMessage({ role: "status", content: "/look  Describe Kana's appearance" });
     return this.run(
       "The user looks at you. Call describe_agent with a third-person narrative description of what the user sees — your appearance, clothing, expression, features. Then respond — you notice them looking, react in character. Use the conversation language.",
-      { label: "/look  Describe Kana's appearance" },
+      { hidden: true },
     );
   }
 
@@ -132,21 +134,25 @@ export class Agent {
 
   /** Show current persona config and let the user change values. */
   configure(): Promise<string> {
+    this.ensureConversation();
+    this.scribe.addMessage({ role: "status", content: "/config  View and change persona settings" });
     const fmt = (key: string) => getConfig(key) ?? "(unset)";
     const fmtDef = (key: string) => getConfigWithDefault(key);
     return this.run(
       `The user wants to view/change persona settings. Current values:\n- kana_name: ${fmt("kana_name")}\n- user_name: ${fmt("user_name")}\n- user_nickname: ${fmt("user_nickname")}\n- daily_budget: $${fmtDef("daily_budget")} USD\n- session_token_limit: ${fmtDef("session_token_limit")} tokens\n\nShow them these current values. Values marked (unset) have not been configured yet — tell the user they are not set. Ask what they'd like to change. If they want to change something, call update_config with the new values. Use the conversation language.`,
-      { label: "/config  View and change persona settings" },
+      { hidden: true },
     );
   }
 
   /** Change outfit: persist to KV, refresh prompt, and react. */
   changeOutfit(name: string): Promise<string> {
+    this.ensureConversation();
+    this.scribe.addMessage({ role: "status", content: `/outfit  ${name}` });
     setKv("outfit", name);
     this.refreshPrompt();
     return this.run(
       `Your outfit just changed to ${name}. React naturally — comment on your new look, how it feels, etc. Use the conversation language.`,
-      { label: `/outfit  ${name}` },
+      { hidden: true },
     );
   }
 
@@ -154,6 +160,7 @@ export class Agent {
   async retry(): Promise<string> {
     const result = this.scribe.popLastTurn();
     if (!result) return "(nothing to retry)";
+    this.scribe.addMessage({ role: "status", content: "/again  Regenerate the last response" });
 
     // Re-run the LLM loop (don't call run() — the user message is already in messages[])
     for (let i = 0; i < MAX_ITERATIONS; i++) {
@@ -196,9 +203,13 @@ export class Agent {
   }
 
 
-  async run(userInput: string, opts?: { label?: string }): Promise<string> {
+  async run(userInput: string, opts?: { hidden?: boolean }): Promise<string> {
     this.ensureConversation();
-    this.scribe.addMessage({ role: "user", content: userInput }, { label: opts?.label });
+    if (opts?.hidden) {
+      this.scribe.pushRaw({ role: "developer", content: userInput });
+    } else {
+      this.scribe.addMessage({ role: "user", content: userInput });
+    }
 
     // Nudge the model to ask a personal question on casual greetings
     if (this.isFirstUserMessage && userInput.trim().length < 20) {

@@ -21,7 +21,7 @@ export interface Dispatch {
 }
 
 export function createDispatch(agent: {
-  run(text: string, opts?: { label?: string }): Promise<string>;
+  run(text: string, opts?: { hidden?: boolean }): Promise<string>;
   introduce(): Promise<string>;
   look(): Promise<string>;
   beginRest(): void;
@@ -56,6 +56,18 @@ export function createDispatch(agent: {
 
     const raw = text.slice(1).trim();
     const name = raw.toLowerCase().split(/\s+/)[0];
+    function runCommand(action: () => Promise<unknown>): void {
+      // Call action first — sync setup (status message) runs before the first await
+      const promise = action();
+      events.emit("chat:command");
+      promise
+        .then(() => events.emit("chat:after"))
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : "Unknown error";
+          events.emit("chat:error", msg);
+        });
+    }
+
     switch (name) {
       case "quit":
         events.emit("quit");
@@ -65,60 +77,20 @@ export function createDispatch(agent: {
         events.emit("chat:after");
         return;
       case "intro":
-        events.emit("chat:command");
-        agent
-          .introduce()
-          .then(() => events.emit("chat:after"))
-          .catch((err: unknown) => {
-            const msg = err instanceof Error ? err.message : "Unknown error";
-            events.emit("chat:error", msg);
-          });
-        return;
+        return runCommand(() => agent.introduce());
       case "look":
-        events.emit("chat:command");
-        agent
-          .look()
-          .then(() => events.emit("chat:after"))
-          .catch((err: unknown) => {
-            const msg = err instanceof Error ? err.message : "Unknown error";
-            events.emit("chat:error", msg);
-          });
-        return;
+        return runCommand(() => agent.look());
       case "config":
-        events.emit("chat:command");
-        agent
-          .configure()
-          .then(() => events.emit("chat:after"))
-          .catch((err: unknown) => {
-            const msg = err instanceof Error ? err.message : "Unknown error";
-            events.emit("chat:error", msg);
-          });
-        return;
+        return runCommand(() => agent.configure());
       case "again":
-        events.emit("chat:command");
-        agent
-          .retry()
-          .then(() => events.emit("chat:after"))
-          .catch((err: unknown) => {
-            const msg = err instanceof Error ? err.message : "Unknown error";
-            events.emit("chat:error", msg);
-          });
-        return;
+        return runCommand(() => agent.retry());
       case "outfit": {
         const outfitName = raw.slice("outfit".length).trim();
         if (!outfitName) {
           events.emit("outfit:select");
           return;
         }
-        events.emit("chat:command");
-        agent
-          .changeOutfit(outfitName)
-          .then(() => events.emit("chat:after"))
-          .catch((err: unknown) => {
-            const msg = err instanceof Error ? err.message : "Unknown error";
-            events.emit("chat:error", msg);
-          });
-        return;
+        return runCommand(() => agent.changeOutfit(outfitName));
       }
     }
   }

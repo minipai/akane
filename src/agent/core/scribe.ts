@@ -47,12 +47,12 @@ export class Scribe {
     this.currentEmotion = emotion;
   }
 
-  addMessage(message: Message, opts?: { label?: string; searched?: boolean }): void {
-    this.messages.push(message);
+  addMessage(message: Message, opts?: { label?: string }): void {
+    // Status messages are display-only — don't send to LLM
+    if (message.role !== "status") this.messages.push(message);
     const entry: ChatEntry = { message, ts: Date.now() };
     if (message.role === "assistant") {
       entry.emotion = this.currentEmotion;
-      if (opts?.searched) entry.searched = true;
     }
     if (opts?.label) entry.label = opts.label;
     this.entries.push(entry);
@@ -70,7 +70,7 @@ export class Scribe {
 
   hydrate(entries: ChatEntry[]): void {
     for (const entry of entries) {
-      this.messages.push(entry.message);
+      if (entry.message.role !== "status") this.messages.push(entry.message);
       this.entries.push(entry);
       if (entry.message.role === "assistant" && entry.emotion) {
         this.currentEmotion = entry.emotion;

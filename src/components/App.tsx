@@ -75,7 +75,7 @@ export default function App({ agent, dispatch, model }: Props) {
   const [, setVitalsTick] = useState(0);
 
   const mergeEntries = useCallback((): Entry[] => {
-    return agent.getEntries();
+    return [...agent.getEntries()];
   }, [agent]);
 
   useEffect(() => {

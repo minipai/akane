@@ -24,7 +24,7 @@ export function createDispatch(agent: {
   run(text: string, opts?: { label?: string }): Promise<string>;
   introduce(): Promise<string>;
   look(): Promise<string>;
-  beginRest(): Promise<void>;
+  beginRest(): void;
   changeOutfit(name: string): Promise<string>;
   configure(): Promise<string>;
   retry(): Promise<string>;
@@ -61,14 +61,8 @@ export function createDispatch(agent: {
         events.emit("quit");
         return;
       case "rest":
-        events.emit("chat:command");
-        agent
-          .beginRest()
-          .then(() => events.emit("chat:after"))
-          .catch((err: unknown) => {
-            const msg = err instanceof Error ? err.message : "Unknown error";
-            events.emit("chat:error", msg);
-          });
+        agent.beginRest();
+        events.emit("chat:after");
         return;
       case "intro":
         events.emit("chat:command");

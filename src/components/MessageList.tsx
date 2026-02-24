@@ -36,7 +36,8 @@ export default function MessageList({ entries }: Props) {
       isInfo(e) ||
       e.label ||
       e.message.role === "user" ||
-      e.message.role === "assistant",
+      e.message.role === "assistant" ||
+      e.message.role === "status",
   );
 
   return (
@@ -48,6 +49,14 @@ export default function MessageList({ entries }: Props) {
               <Box borderStyle="round" borderColor="#555" paddingX={1}>
                 <Text wrap="wrap">{entry.content}</Text>
               </Box>
+            </Box>
+          );
+        }
+
+        if (entry.message.role === "status") {
+          return (
+            <Box key={i} marginBottom={0}>
+              <Text dimColor>{entry.message.content}</Text>
             </Box>
           );
         }
@@ -68,11 +77,6 @@ export default function MessageList({ entries }: Props) {
 
         return (
           <Box key={i} flexDirection="column" marginBottom={0}>
-            {isAssistant && entry.searched && (
-              <Box>
-                <Text dimColor>{getConfigWithDefault("kana_name")} searched the web</Text>
-              </Box>
-            )}
             <Box>
               <Box flexShrink={0}>
                 <Text color={isAssistant ? "#ff77ff" : "green"} bold>

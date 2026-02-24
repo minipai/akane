@@ -121,13 +121,13 @@ export class Agent {
     );
   }
 
-  /** Say goodbye and end the session. */
-  async beginRest(): Promise<void> {
-    await this.run(
-      "The user wants to rest and end this session. Respond briefly with a warm goodbye first, then call rest_session with a second-person narrative description of how you settle down to rest. Use the conversation language.",
-      { label: "/rest  End session and start fresh" },
-    );
-    await this.rest();
+  /** End the current session — no LLM call, just save and reset. */
+  beginRest(): void {
+    this.ensureConversation();
+    this.scribe.addMessage({ role: "status", content: `${getConfigWithDefault("kana_name")} quietly tucking away today's memories…` });
+    this.vitals.setTotalTokens(0);
+    // Fire-and-forget: summary generation happens in the background
+    this.rest();
   }
 
   /** Show current persona config and let the user change values. */
@@ -160,7 +160,8 @@ export class Agent {
       const { message, searched } = await this.callLLM();
       if (!message) return "(no response)";
 
-      this.scribe.addMessage(message, { searched });
+      if (searched) this.scribe.addMessage({ role: "status", content: `${getConfigWithDefault("kana_name")} searched the web` });
+      this.scribe.addMessage(message);
 
       const calls = message.tool_calls?.filter((tc) => tc.type === "function");
       if (!calls || calls.length === 0) {
@@ -215,7 +216,8 @@ export class Agent {
       const { message, searched } = await this.callLLM();
       if (!message) return "(no response)";
 
-      this.scribe.addMessage(message, { searched });
+      if (searched) this.scribe.addMessage({ role: "status", content: `${getConfigWithDefault("kana_name")} searched the web` });
+      this.scribe.addMessage(message);
 
       const calls = message.tool_calls?.filter((tc) => tc.type === "function");
       if (!calls || calls.length === 0) {

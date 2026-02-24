@@ -547,7 +547,7 @@ describe("Agent", () => {
       expect(labeled).toBeTruthy();
     });
 
-    it("beginRest() sends rest prompt then ends session", async () => {
+    it("beginRest() adds tip entry and ends session without LLM call", async () => {
       const agent = makeAgent();
       agent.start();
 
@@ -555,20 +555,25 @@ describe("Agent", () => {
       vi.mocked(client.chat).mockResolvedValueOnce(textResponse("Hi!"));
       await agent.run("hello");
 
-      // beginRest: LLM says goodbye + calls rest_session (terminal)
-      vi.mocked(client.chat).mockResolvedValueOnce(
-        toolCallResponse(
-          [{ id: "tc1", name: "rest_session", args: '{"description":"Kana curls up."}' }],
-          "Goodnight!",
-        ),
-      );
+      const chatCallsBefore = vi.mocked(client.chat).mock.calls.length;
 
-      await agent.beginRest();
+      // beginRest is sync, fires rest() in background
+      agent.beginRest();
 
-      // Conversation should be ended
-      const rows = db.select().from(conversations).all();
-      expect(rows).toHaveLength(1);
-      expect(rows[0].endedAt).not.toBeNull();
+      // No additional LLM chat call should have been made
+      expect(vi.mocked(client.chat).mock.calls.length).toBe(chatCallsBefore);
+
+      // Should have a status entry
+      const entries = agent.getEntries();
+      const status = entries.find((e: any) => e.message?.role === "status");
+      expect(status).toBeTruthy();
+
+      // Wait for fire-and-forget rest() to complete
+      await vi.waitFor(() => {
+        const rows = db.select().from(conversations).all();
+        expect(rows).toHaveLength(1);
+        expect(rows[0].endedAt).not.toBeNull();
+      });
     });
 
     it("changeOutfit() persists outfit and sends reaction prompt", async () => {

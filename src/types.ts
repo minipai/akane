@@ -5,7 +5,7 @@ export interface ToolCall {
 }
 
 export interface Message {
-  role: "system" | "user" | "assistant" | "developer" | "tool";
+  role: "system" | "user" | "assistant" | "developer" | "tool" | "status";
   content: string | null;
   tool_calls?: ToolCall[];
   tool_call_id?: string;
@@ -42,7 +42,6 @@ export interface ChatEntry {
   message: Message;
   emotion?: string;
   label?: string;
-  searched?: boolean;
   ts?: number;
 }
 

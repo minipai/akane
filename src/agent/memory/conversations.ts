@@ -30,7 +30,7 @@ export function getConversationMessages(db: Db, conversationId: string): ChatEnt
     .where(
       and(
         eq(messages.conversationId, conversationId),
-        inArray(messages.role, ["user", "assistant"]),
+        inArray(messages.role, ["user", "assistant", "status"]),
       ),
     )
     .orderBy(messages.id)

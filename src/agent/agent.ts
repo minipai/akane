@@ -133,6 +133,16 @@ export class Agent {
     );
   }
 
+  /** Start a game with the user. */
+  play(game: string): Promise<string> {
+    this.ensureConversation();
+    this.scribe.addMessage({ role: "status", content: `/play  ${game}` });
+    return this.run(
+      `The user wants to play "${game}" with you. Explain the rules briefly, then start the first round. Keep it fun and in character. Use the conversation language.`,
+      { hidden: true },
+    );
+  }
+
   /** End the current session — no LLM call, just save and reset. */
   beginRest(): void {
     this.ensureConversation();

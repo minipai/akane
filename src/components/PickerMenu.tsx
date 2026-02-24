@@ -12,11 +12,12 @@ interface Props {
   title: string;
   items: PickerItem[];
   placeholder?: string;
+  hideCustom?: boolean;
   onSelect: (value: string) => void;
   onCancel: () => void;
 }
 
-export default function PickerMenu({ title, items, placeholder, onSelect, onCancel }: Props) {
+export default function PickerMenu({ title, items, placeholder, hideCustom, onSelect, onCancel }: Props) {
   const { exit } = useApp();
   const [index, setIndex] = useState(0);
   const [custom, setCustom] = useState("");
@@ -24,8 +25,8 @@ export default function PickerMenu({ title, items, placeholder, onSelect, onCanc
   const width = stdout?.columns ?? 80;
   const line = "─".repeat(width);
 
-  const isCustom = index === items.length;
-  const totalItems = items.length + 1;
+  const totalItems = hideCustom ? items.length : items.length + 1;
+  const isCustom = !hideCustom && index === items.length;
 
   useInput((_input, key) => {
     if (_input === "c" && key.ctrl) {
@@ -75,22 +76,24 @@ export default function PickerMenu({ title, items, placeholder, onSelect, onCanc
           </Box>
         );
       })}
-      <Box>
-        <Text color={isCustom ? "#ff77ff" : undefined} bold={isCustom}>
-          {isCustom ? " ❯ " : "   "}
-        </Text>
-        {isCustom ? (
-          <TextInput
-            value={custom}
-            onChange={setCustom}
-            onSubmit={handleCustomSubmit}
-            placeholder={placeholder ?? "type here..."}
-            focus={true}
-          />
-        ) : (
-          <Text dimColor>custom...</Text>
-        )}
-      </Box>
+      {!hideCustom && (
+        <Box>
+          <Text color={isCustom ? "#ff77ff" : undefined} bold={isCustom}>
+            {isCustom ? " ❯ " : "   "}
+          </Text>
+          {isCustom ? (
+            <TextInput
+              value={custom}
+              onChange={setCustom}
+              onSubmit={handleCustomSubmit}
+              placeholder={placeholder ?? "type here..."}
+              focus={true}
+            />
+          ) : (
+            <Text dimColor>custom...</Text>
+          )}
+        </Box>
+      )}
       <Text dimColor> ↑↓ navigate · Enter select · Esc cancel</Text>
     </Box>
   );

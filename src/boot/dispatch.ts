@@ -13,6 +13,7 @@ export interface DispatchEvents {
   "chat:error": [error: string];
   "outfit:select": [];
   "action:select": [];
+  "play:select": [];
 }
 
 export interface Dispatch {
@@ -30,16 +31,18 @@ export function createDispatch(agent: {
   configure(): Promise<string>;
   retry(): Promise<string>;
   action(action: string): Promise<string>;
+  play(game: string): Promise<string>;
 }): Dispatch {
   const events = new EventEmitter<DispatchEvents>();
 
   const commands: SlashCommand[] = [
-    { name: "me", description: "Perform an action (e.g. /me hugs you)" },
-    { name: "again", description: "Regenerate the last response" },
-    { name: "intro", description: "Ask Kana to introduce herself" },
     { name: "look", description: "Describe Kana's appearance" },
     { name: "outfit", description: "Change outfit" },
+    { name: "me", description: "Perform an action (e.g. /me hugs you)" },
+    { name: "play", description: "Play a game together" },
+    { name: "intro", description: "Ask Kana to introduce herself" },
     { name: "config", description: "View and change persona settings" },
+    { name: "again", description: "Regenerate the last response" },
     { name: "rest", description: "End session and start fresh" },
     { name: "quit", description: "Exit the app" },
   ];
@@ -92,6 +95,14 @@ export function createDispatch(agent: {
           return;
         }
         return runCommand(() => agent.action(action));
+      }
+      case "play": {
+        const game = raw.slice("play".length).trim();
+        if (!game) {
+          events.emit("play:select");
+          return;
+        }
+        return runCommand(() => agent.play(game));
       }
       case "again":
         return runCommand(() => agent.retry());

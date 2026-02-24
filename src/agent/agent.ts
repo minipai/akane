@@ -5,6 +5,7 @@ import type { Cache } from "../boot/cache.js";
 import { tools } from "./tools/index.js";
 import { buildSystemPrompt } from "./prompts/index.js";
 import { setKv } from "../db/kv.js";
+import { fetchAndCacheWeather, getCachedWeather } from "../utils/ambient.js";
 import { getConfig, getConfigWithDefault } from "../db/config.js";
 import { generateNextQuestion } from "./tools/user-facts.js";
 import { Scribe } from "./core/scribe.js";
@@ -47,6 +48,7 @@ export class Agent {
     // Fire-and-forget boot-time memory ops
     const compress = this.client.compress.bind(this.client);
     this.memory.fadeMemories();
+    if (!getCachedWeather()) fetchAndCacheWeather();
     if (!this.cache.nextQuestion) {
       generateNextQuestion(this.memory, this.cache, compress);
     }

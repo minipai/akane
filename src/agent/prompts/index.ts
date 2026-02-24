@@ -4,6 +4,7 @@ import { fileURLToPath } from "url";
 import { outfits, DEFAULT_OUTFIT } from "./outfits.js";
 import { getKv } from "../../db/kv.js";
 import { getConfigWithDefault } from "../../db/config.js";
+import { getTimeContext, getCachedWeather } from "../../utils/ambient.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -88,6 +89,13 @@ export function buildSystemPrompt(memory?: MemoryContext): string {
       raw += `\n\n# Earlier today\n${memory.recentSummary}`;
     }
   }
+
+  const { period, dayOfWeek, isWeekend, timeString, dateString } = getTimeContext();
+  const dayType = isWeekend ? "weekend" : "weekday";
+  let ctx = `# Context\n- Date: ${dateString} (${dayOfWeek}, ${dayType})\n- Time: ${timeString} (${period})`;
+  const weather = getCachedWeather();
+  if (weather) ctx += `\n- Weather: ${weather}`;
+  raw += `\n\n${ctx}`;
 
   return replaceVars(raw);
 }

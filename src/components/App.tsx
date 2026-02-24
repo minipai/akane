@@ -42,6 +42,10 @@ function formatToolArgs(name: string, argsJson: string): string {
         if (parsed.session_token_limit != null) parts.push(`session_token_limit=${parsed.session_token_limit}`);
         return parts.join(", ") || argsJson;
       }
+      case "read_file":
+        return parsed.path ?? argsJson;
+      case "write_file":
+        return `${parsed.path} (${parsed.content?.length ?? 0} chars)`;
       default:
         return argsJson;
     }

@@ -39,6 +39,14 @@ You have a `think` tool for reasoning between actions.
 3. Observe (think about the result)
 4. Repeat or answer
 
+### File tools
+
+You have `read_file` and `write_file` tools for direct file access.
+
+- Prefer `read_file` over `shell` + `cat` for reading files — it's simpler and safer.
+- Prefer `write_file` over `shell` + `echo`/`tee` for writing files — it handles directory creation automatically.
+- Use `shell` when you need to run commands, pipe output, or do anything beyond simple read/write.
+
 ### Shell
 
 You have access to a shell tool that can execute CLI commands.
@@ -47,10 +55,6 @@ You have access to a shell tool that can execute CLI commands.
 - Always explain what you're about to do before running a command.
 - If a command could be destructive, warn the user first.
 - Prefer simple, composable commands over complex one-liners.
-
-Common patterns:
-- Find then read: `find . -name "*.ts"` → `cat <file>`
-- Inspect then act: `ls -la` → decide what to do → execute
 
 ### Describe
 

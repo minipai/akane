@@ -16,6 +16,12 @@ import { restSessionToolDef, executeRestSession } from "./rest.js";
 import { searchToolDef, executeSearch } from "./search.js";
 import { updateConfigToolDef, executeUpdateConfig } from "./config.js";
 import { thinkToolDef, executeThink } from "./think.js";
+import {
+  readFileToolDef,
+  writeFileToolDef,
+  executeReadFile,
+  executeWriteFile,
+} from "./file.js";
 import type { SearchClient } from "../../boot/search.js";
 
 export interface ToolContext {
@@ -39,6 +45,8 @@ export const tools = [
   searchToolDef,
   updateConfigToolDef,
   thinkToolDef,
+  readFileToolDef,
+  writeFileToolDef,
 ];
 
 /** Tools that don't need a follow-up LLM call — their output is the final response. */
@@ -55,6 +63,7 @@ export const autoApprovedTools = new Set([
   "web_search",
   "update_config",
   "think",
+  "read_file",
 ]);
 
 export async function executeTool(
@@ -86,6 +95,10 @@ export async function executeTool(
       return executeUpdateConfig(parsed, ctx.refreshPrompt ?? (() => {}));
     case "think":
       return executeThink();
+    case "read_file":
+      return executeReadFile(parsed.path);
+    case "write_file":
+      return executeWriteFile(parsed.path, parsed.content);
     default:
       return `Unknown tool: ${name}`;
   }

@@ -83,6 +83,20 @@ src/
   - `mindset` — personality traits, beliefs, ethics, worldview, interaction style
   - `timeline` — life milestones, goals, commitments, open loops, plans
 
+## Testing
+
+Tests use **vitest** (`pnpm test` / `pnpm test:watch`). The main test file is `test/agent.test.ts` — integration tests against the `Agent` class with a mocked `ChatClient` and an in-memory SQLite DB.
+
+Key patterns:
+- `createTestDb()` — in-memory DB with real migrations applied
+- `vi.mock("../src/db/db.js")` — redirects `getDb()` to the test DB
+- `textResponse()` / `toolCallResponse()` — helpers to mock LLM responses
+- Test tool approval by setting `agent.setOnToolApproval(({ resolve }) => resolve(true|false))`
+- Test tool activity by collecting via `agent.setOnToolActivity(a => log.push(a))`
+- Verify tool results by inspecting `agent.getMessages()` for `role: "tool"` entries
+
+When adding a new tool, add tests covering: auto-approval (or approval required), tool result content, error handling, and activity reporting.
+
 ## Adding a New Tool
 
 1. Create `src/tools/<name>.ts` with tool definition and executor

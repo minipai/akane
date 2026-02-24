@@ -1054,6 +1054,162 @@ describe("Agent", () => {
     });
   });
 
+  // ─── File tools ──────────────────────────────────────────────
+
+  describe("file tools", () => {
+    it("read_file is auto-approved (no approval callback)", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      const approvalCb = vi.fn();
+      agent.setOnToolApproval(approvalCb);
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc1", name: "read_file", args: '{"path":"package.json"}' },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("Here's the file."));
+
+      await agent.run("read package.json");
+      expect(approvalCb).not.toHaveBeenCalled();
+    });
+
+    it("read_file returns file content to LLM", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc1", name: "read_file", args: '{"path":"package.json"}' },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("Got it."));
+
+      await agent.run("read package.json");
+
+      const msgs = agent.getMessages();
+      const toolMsg = msgs.find(
+        (m: any) => m.role === "tool" && typeof m.content === "string" && m.content.includes('"name"'),
+      );
+      expect(toolMsg).toBeTruthy();
+    });
+
+    it("read_file returns error for missing file", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc1", name: "read_file", args: '{"path":"/nonexistent/file.txt"}' },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("File not found."));
+
+      await agent.run("read missing file");
+
+      const msgs = agent.getMessages();
+      const toolMsg = msgs.find(
+        (m: any) => m.role === "tool" && typeof m.content === "string" && m.content.includes("Error reading file"),
+      );
+      expect(toolMsg).toBeTruthy();
+    });
+
+    it("write_file requires approval (not auto-approved)", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      const approvalCb = vi.fn(({ resolve }: any) => resolve(true));
+      agent.setOnToolApproval(approvalCb);
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc1", name: "write_file", args: '{"path":"/tmp/kana_test_write.txt","content":"hello"}' },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("Written!"));
+
+      await agent.run("write a file");
+      expect(approvalCb).toHaveBeenCalled();
+    });
+
+    it("write_file creates file and returns byte count", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      agent.setOnToolApproval(({ resolve }) => resolve(true));
+
+      const testPath = `/tmp/kana_test_${Date.now()}.txt`;
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc1", name: "write_file", args: JSON.stringify({ path: testPath, content: "test content" }) },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("Done!"));
+
+      await agent.run("write a file");
+
+      const msgs = agent.getMessages();
+      const toolMsg = msgs.find(
+        (m: any) => m.role === "tool" && typeof m.content === "string" && m.content.includes("bytes"),
+      );
+      expect(toolMsg).toBeTruthy();
+
+      // Clean up
+      const { unlink } = await import("fs/promises");
+      await unlink(testPath).catch(() => {});
+    });
+
+    it("write_file denied returns denial message", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      agent.setOnToolApproval(({ resolve }) => resolve(false));
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc1", name: "write_file", args: '{"path":"/tmp/denied.txt","content":"nope"}' },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("Okay, I won't write."));
+
+      await agent.run("write something");
+
+      const msgs = agent.getMessages();
+      const toolMsg = msgs.find(
+        (m: any) => m.role === "tool" && typeof m.content === "string" && m.content.includes("denied"),
+      );
+      expect(toolMsg).toBeTruthy();
+    });
+
+    it("read_file shows activity in tool panel", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      const activityLog: any[] = [];
+      agent.setOnToolActivity((a) => activityLog.push(a));
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc1", name: "read_file", args: '{"path":"package.json"}' },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("Got it."));
+
+      await agent.run("read a file");
+
+      expect(activityLog.some((a) => a.name === "read_file")).toBe(true);
+    });
+  });
+
   // ─── Web search tool ──────────────────────────────────────────
 
   describe("web search tool", () => {

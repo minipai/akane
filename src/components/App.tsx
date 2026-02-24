@@ -9,6 +9,7 @@ import ApprovalBar from "./ApprovalBar.js";
 import OutfitMenu from "./OutfitMenu.js";
 import ActionMenu from "./ActionMenu.js";
 import PlayMenu from "./PlayMenu.js";
+import LookMenu from "./LookMenu.js";
 import StatusBar from "./StatusBar.js";
 import type { Agent } from "../agent/agent.js";
 import type { ChatEntry, ToolActivity, ToolApprovalRequest, Entry } from "../agent/types.js";
@@ -73,7 +74,7 @@ export default function App({ agent, dispatch, model }: Props) {
   const [toolActivity, setToolActivity] = useState<ToolActivity | null>(null);
   const [pendingApproval, setPendingApproval] =
     useState<ToolApprovalRequest | null>(null);
-  const [activeMenu, setActiveMenu] = useState<"outfit" | "action" | "play" | "cmd" | null>(null);
+  const [activeMenu, setActiveMenu] = useState<"outfit" | "action" | "play" | "look" | "cmd" | null>(null);
   const [, setVitalsTick] = useState(0);
 
   const mergeEntries = useCallback((): Entry[] => {
@@ -108,6 +109,7 @@ export default function App({ agent, dispatch, model }: Props) {
     ev.on("outfit:select", () => setActiveMenu("outfit"));
     ev.on("action:select", () => setActiveMenu("action"));
     ev.on("play:select", () => setActiveMenu("play"));
+    ev.on("look:select", () => setActiveMenu("look"));
     ev.on("chat:error", (errMsg) => {
       setEntries((prev) => [
         ...prev,
@@ -147,6 +149,14 @@ export default function App({ agent, dispatch, model }: Props) {
     (action: string) => {
       setActiveMenu(null);
       dispatch.handle(`/me ${action}`);
+    },
+    [dispatch],
+  );
+
+  const handleLookSelect = useCallback(
+    (target: string) => {
+      setActiveMenu(null);
+      dispatch.handle(`/look ${target}`);
     },
     [dispatch],
   );
@@ -205,6 +215,11 @@ export default function App({ agent, dispatch, model }: Props) {
           outfits={outfits}
           currentName={getKv("outfit") ?? DEFAULT_OUTFIT.name}
           onSelect={handleOutfitSelect}
+          onCancel={closeMenu}
+        />
+      ) : activeMenu === "look" ? (
+        <LookMenu
+          onSelect={handleLookSelect}
           onCancel={closeMenu}
         />
       ) : activeMenu === "action" ? (

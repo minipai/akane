@@ -114,8 +114,15 @@ export class Agent {
   }
 
   /** Describe appearance for /look. */
-  look(): Promise<string> {
+  look(target?: string): Promise<string> {
     this.ensureConversation();
+    if (target) {
+      this.scribe.addMessage({ role: "status", content: `/look  ${target}` });
+      return this.run(
+        `The user looks at: "${target}". Call describe_agent with a third-person narrative description focusing on "${target}" — be vivid, specific, and sensory. Then respond — you notice them looking, react in character. Use the conversation language.`,
+        { hidden: true },
+      );
+    }
     this.scribe.addMessage({ role: "status", content: "/look  Describe Kana's appearance" });
     return this.run(
       "The user looks at you. Call describe_agent with a third-person narrative description of what the user sees — your appearance, clothing, expression, features. Then respond — you notice them looking, react in character. Use the conversation language.",

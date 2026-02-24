@@ -14,6 +14,7 @@ export interface DispatchEvents {
   "outfit:select": [];
   "action:select": [];
   "play:select": [];
+  "look:select": [];
 }
 
 export interface Dispatch {
@@ -25,7 +26,7 @@ export interface Dispatch {
 export function createDispatch(agent: {
   run(text: string, opts?: { hidden?: boolean }): Promise<string>;
   introduce(): Promise<string>;
-  look(): Promise<string>;
+  look(target?: string): Promise<string>;
   beginRest(): void;
   changeOutfit(name: string): Promise<string>;
   configure(): Promise<string>;
@@ -84,8 +85,14 @@ export function createDispatch(agent: {
         return;
       case "intro":
         return runCommand(() => agent.introduce());
-      case "look":
-        return runCommand(() => agent.look());
+      case "look": {
+        const target = raw.slice("look".length).trim();
+        if (!target) {
+          events.emit("look:select");
+          return;
+        }
+        return runCommand(() => agent.look(target));
+      }
       case "config":
         return runCommand(() => agent.configure());
       case "me": {

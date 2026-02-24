@@ -123,6 +123,16 @@ export class Agent {
     );
   }
 
+  /** User performs an action — Kana reacts in character. */
+  action(action: string): Promise<string> {
+    this.ensureConversation();
+    this.scribe.addMessage({ role: "status", content: `/me  ${action}` });
+    return this.run(
+      `The user performs an action: *${action}*. React naturally in character. Keep it brief. Use the conversation language.`,
+      { hidden: true },
+    );
+  }
+
   /** End the current session — no LLM call, just save and reset. */
   beginRest(): void {
     this.ensureConversation();

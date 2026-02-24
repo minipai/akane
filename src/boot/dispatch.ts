@@ -12,6 +12,7 @@ export interface DispatchEvents {
   "chat:command": [];
   "chat:error": [error: string];
   "outfit:select": [];
+  "action:select": [];
 }
 
 export interface Dispatch {
@@ -28,10 +29,12 @@ export function createDispatch(agent: {
   changeOutfit(name: string): Promise<string>;
   configure(): Promise<string>;
   retry(): Promise<string>;
+  action(action: string): Promise<string>;
 }): Dispatch {
   const events = new EventEmitter<DispatchEvents>();
 
   const commands: SlashCommand[] = [
+    { name: "me", description: "Perform an action (e.g. /me hugs you)" },
     { name: "again", description: "Regenerate the last response" },
     { name: "intro", description: "Ask Kana to introduce herself" },
     { name: "look", description: "Describe Kana's appearance" },
@@ -82,6 +85,14 @@ export function createDispatch(agent: {
         return runCommand(() => agent.look());
       case "config":
         return runCommand(() => agent.configure());
+      case "me": {
+        const action = raw.slice("me".length).trim();
+        if (!action) {
+          events.emit("action:select");
+          return;
+        }
+        return runCommand(() => agent.action(action));
+      }
       case "again":
         return runCommand(() => agent.retry());
       case "outfit": {

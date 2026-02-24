@@ -7,6 +7,7 @@ import ToolPanel from "./ToolPanel.js";
 import InputBar from "./InputBar.js";
 import ApprovalBar from "./ApprovalBar.js";
 import OutfitMenu from "./OutfitMenu.js";
+import ActionMenu from "./ActionMenu.js";
 import StatusBar from "./StatusBar.js";
 import type { Agent } from "../agent/agent.js";
 import type { ChatEntry, ToolActivity, ToolApprovalRequest, Entry } from "../agent/types.js";
@@ -72,6 +73,7 @@ export default function App({ agent, dispatch, model }: Props) {
   const [pendingApproval, setPendingApproval] =
     useState<ToolApprovalRequest | null>(null);
   const [outfitSelecting, setOutfitSelecting] = useState(false);
+  const [actionSelecting, setActionSelecting] = useState(false);
   const [cmdMenuOpen, setCmdMenuOpen] = useState(false);
   const [, setVitalsTick] = useState(0);
 
@@ -106,6 +108,9 @@ export default function App({ agent, dispatch, model }: Props) {
     });
     ev.on("outfit:select", () => {
       setOutfitSelecting(true);
+    });
+    ev.on("action:select", () => {
+      setActionSelecting(true);
     });
     ev.on("chat:error", (errMsg) => {
       setEntries((prev) => [
@@ -142,6 +147,18 @@ export default function App({ agent, dispatch, model }: Props) {
 
   const handleOutfitCancel = useCallback(() => {
     setOutfitSelecting(false);
+  }, []);
+
+  const handleActionSelect = useCallback(
+    (action: string) => {
+      setActionSelecting(false);
+      dispatch.handle(`/me ${action}`);
+    },
+    [dispatch],
+  );
+
+  const handleActionCancel = useCallback(() => {
+    setActionSelecting(false);
   }, []);
 
   const handleSubmit = useCallback(
@@ -192,12 +209,17 @@ export default function App({ agent, dispatch, model }: Props) {
           onSelect={handleOutfitSelect}
           onCancel={handleOutfitCancel}
         />
+      ) : actionSelecting ? (
+        <ActionMenu
+          onSelect={handleActionSelect}
+          onCancel={handleActionCancel}
+        />
       ) : pendingApproval ? (
         <ApprovalBar onApproval={handleApproval} />
       ) : (
         <InputBar onSubmit={handleSubmit} disabled={loading} commands={dispatch.commands} onMenuChange={setCmdMenuOpen} />
       )}
-      {!cmdMenuOpen && !outfitSelecting && <StatusBar vitals={agent.vitals} model={model} />}
+      {!cmdMenuOpen && !outfitSelecting && !actionSelecting && <StatusBar vitals={agent.vitals} model={model} />}
     </Box>
   );
 }

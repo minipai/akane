@@ -22,8 +22,18 @@ export function boot(): { agent: Agent; model: string; dispatch: Dispatch } {
   const { client, model } = createClient(config);
   const db = getDb();
   const cache = createCache();
-  const agent = new Agent(client, db, cache);
-  agent.start();
+  let agent: Agent;
+  try {
+    agent = new Agent(client, db, cache);
+    agent.start();
+  } catch (err) {
+    const ts = new Date().toISOString();
+    const msg = err instanceof Error ? err.stack ?? err.message : String(err);
+    appendFileSync(LOG_PATH, `[${ts}] BOOT FAILED: ${msg}\n`);
+    const short = err instanceof Error ? err.message : String(err);
+    console.error(`Error: ${short}\nLog: ${LOG_PATH}`);
+    process.exit(1);
+  }
   const dispatch = createDispatch(agent);
   return { agent, model, dispatch };
 }

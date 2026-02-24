@@ -57,18 +57,14 @@ export class Scribe {
     this.entries.push(entry);
 
     if (this.conversationId) {
-      try {
-        this.memory.saveMessage(this.conversationId, entry);
-      } catch {}
+      this.memory.saveMessage(this.conversationId, entry);
     }
   }
 
   pushRaw(message: Message): void {
     this.messages.push(message);
     if (this.conversationId) {
-      try {
-        this.memory.saveMessage(this.conversationId, { message, ts: Date.now() });
-      } catch {}
+      this.memory.saveMessage(this.conversationId, { message, ts: Date.now() });
     }
   }
 
@@ -116,9 +112,7 @@ export class Scribe {
 
     // Delete from DB
     if (this.conversationId && dbRemovedCount > 0) {
-      try {
-        this.memory.deleteLastMessages(this.conversationId, dbRemovedCount);
-      } catch {}
+      this.memory.deleteLastMessages(this.conversationId, dbRemovedCount);
     }
 
     return { userContent, removedCount: dbRemovedCount };

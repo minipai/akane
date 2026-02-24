@@ -84,11 +84,9 @@ export class Technician {
       const result = await executeTool(tc.function.name, tc.function.arguments, this.ctx);
 
       if (tc.function.name === "set_emotion") {
-        try {
-          const parsed = JSON.parse(tc.function.arguments);
-          emotion = parsed.emotion;
-          this.onEmotionChange?.(parsed.emotion);
-        } catch {}
+        const parsed = JSON.parse(tc.function.arguments);
+        emotion = parsed.emotion;
+        this.onEmotionChange?.(parsed.emotion);
       } else if (!silentTools.has(tc.function.name)) {
         this.onActivity?.({
           name: tc.function.name,

@@ -27,6 +27,8 @@ export function executeShell(command: string): Promise<string> {
       if (output.length > MAX_OUTPUT) {
         output = output.slice(0, MAX_OUTPUT) + "\n... (truncated)";
       }
+      const code = error?.code ?? 0;
+      if (code !== 0) output = `[exit ${code}] ${output}`;
       resolve(output);
     });
   });

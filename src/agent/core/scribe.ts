@@ -1,4 +1,3 @@
-import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import type { Message, ChatEntry, Entry, InfoEntry } from "../../types.js";
 import type { Memory } from "../memory/memory.js";
 
@@ -48,7 +47,7 @@ export class Scribe {
     this.currentEmotion = emotion;
   }
 
-  addMessage(message: ChatCompletionMessageParam, opts?: { label?: string }): void {
+  addMessage(message: Message, opts?: { label?: string }): void {
     this.messages.push(message);
     const entry: ChatEntry = { message, ts: Date.now() };
     if (message.role === "assistant") {

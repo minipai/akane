@@ -1,14 +1,33 @@
-import type { ChatCompletionMessageParam, ChatCompletionTool, ChatCompletionMessage } from "openai/resources/chat/completions";
+export interface ToolCall {
+  id: string;
+  type: "function";
+  function: { name: string; arguments: string };
+}
 
-export type Message = ChatCompletionMessageParam;
+export interface Message {
+  role: "system" | "user" | "assistant" | "developer" | "tool";
+  content: string | null;
+  tool_calls?: ToolCall[];
+  tool_call_id?: string;
+}
+
+export interface ToolDef {
+  type: "function";
+  function: {
+    name: string;
+    description?: string;
+    parameters?: Record<string, unknown> | null;
+    strict?: boolean | null;
+  };
+}
 
 /** Abstract chat client — hides provider-specific details (OpenAI, etc.). */
 export interface ChatClient {
   chat(params: {
     messages: Message[];
-    tools?: ChatCompletionTool[];
+    tools?: ToolDef[];
   }): Promise<{
-    message: ChatCompletionMessage | null;
+    message: Message | null;
     totalTokens?: number;
   }>;
 
@@ -55,5 +74,4 @@ export interface Config {
   baseUrl: string;
   model: string;
   contextLimit: number;
-  tavilyApiKey: string;
 }

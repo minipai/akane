@@ -1,11 +1,8 @@
-import type { ChatClient } from "../types.js";
-import type { ChatCompletionMessage } from "openai/resources/chat/completions";
-import type { InfoEntry, Entry } from "../types.js";
+import type { ChatClient, Message, InfoEntry, Entry } from "../types.js";
 import type { Db } from "../db/db.js";
 import { Memory } from "./memory/memory.js";
 import type { Cache } from "../boot/cache.js";
 import { tools } from "./tools/index.js";
-import type { SearchClient } from "../boot/search.js";
 import { buildSystemPrompt } from "./prompts/index.js";
 import { setKv } from "../db/kv.js";
 import { getConfig, getConfigWithDefault } from "../db/config.js";
@@ -29,7 +26,7 @@ export class Agent {
   private secretary: Secretary;
   private isFirstUserMessage = true;
 
-  constructor(client: ChatClient, db: Db, cache: Cache, search: SearchClient | null = null) {
+  constructor(client: ChatClient, db: Db, cache: Cache) {
     this.client = client;
     this.memory = new Memory(db, client.compress.bind(client));
     this.cache = cache;
@@ -40,7 +37,6 @@ export class Agent {
       this.memory, cache, client.compress.bind(client),
       this.addInfo.bind(this),
       () => this.vitals.setTotalTokens(0),
-      search,
       () => this.refreshPrompt(),
     );
     this.secretary = new Secretary(this.memory, cache, client.compress.bind(client));
@@ -207,7 +203,7 @@ export class Agent {
       const nudge = question
         ? `After greeting, you MUST ask this exact question (translate to the conversation language if needed): ${question}`
         : "Greet the user and casually ask something about themselves to get to know them better.";
-      this.scribe.pushRaw({ role: "developer", content: nudge } as any);
+      this.scribe.pushRaw({ role: "developer", content: nudge });
       // Pre-generate a fresh question for next session
       generateNextQuestion(this.memory, this.cache, this.client.compress.bind(this.client));
     }
@@ -239,10 +235,10 @@ export class Agent {
     return "(max iterations reached)";
   }
 
-  private async callLLM(): Promise<ChatCompletionMessage | null> {
-    const messages = [
+  private async callLLM(): Promise<Message | null> {
+    const messages: Message[] = [
       ...this.scribe.getMessages(),
-      { role: "developer", content: this.vitals.buildHints() } as any,
+      { role: "developer", content: this.vitals.buildHints() },
     ];
 
     const { message, totalTokens } = await this.client.chat({ messages, tools });

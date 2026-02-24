@@ -23,11 +23,7 @@ const EMOTION_EMOJI: Record<string, string> = {
 };
 
 function getContent(msg: ChatEntry["message"]): string {
-  if (typeof msg.content === "string") return msg.content;
-  if (Array.isArray(msg.content)) {
-    return msg.content.map((c) => ("text" in c ? c.text : "")).join("");
-  }
-  return "";
+  return msg.content ?? "";
 }
 
 interface Props {

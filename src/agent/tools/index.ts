@@ -1,6 +1,6 @@
 import type { Memory } from "../memory/memory.js";
 import type { Cache } from "../../boot/cache.js";
-import type { Compressor, InfoEntry } from "../../types.js";
+import type { Compressor, InfoEntry, ToolDef } from "../../types.js";
 import { shellToolDef, executeShell } from "./shell.js";
 import { emotionToolDef, executeEmotion } from "./emotion.js";
 import {
@@ -13,7 +13,6 @@ import {
 } from "./user-facts.js";
 import { describeAgentToolDef, executeDescribeAgent } from "./describe.js";
 import { restSessionToolDef, executeRestSession } from "./rest.js";
-import { searchToolDef, executeSearch } from "./search.js";
 import { updateConfigToolDef, executeUpdateConfig } from "./config.js";
 import { thinkToolDef, executeThink } from "./think.js";
 import {
@@ -22,7 +21,6 @@ import {
   executeReadFile,
   executeWriteFile,
 } from "./file.js";
-import type { SearchClient } from "../../boot/search.js";
 
 export interface ToolContext {
   memory: Memory;
@@ -31,10 +29,9 @@ export interface ToolContext {
   addInfo: (info: InfoEntry) => void;
   onRest?: () => void;
   refreshPrompt?: () => void;
-  search: SearchClient | null;
 }
 
-export const tools = [
+export const tools: ToolDef[] = [
   shellToolDef,
   emotionToolDef,
   noteAboutUserToolDef,
@@ -42,7 +39,6 @@ export const tools = [
   updateUserFactToolDef,
   describeAgentToolDef,
   restSessionToolDef,
-  searchToolDef,
   updateConfigToolDef,
   thinkToolDef,
   readFileToolDef,
@@ -60,7 +56,6 @@ export const autoApprovedTools = new Set([
   "update_user_fact",
   "describe_agent",
   "rest_session",
-  "web_search",
   "update_config",
   "think",
   "read_file",
@@ -89,8 +84,6 @@ export async function executeTool(
     case "rest_session":
       ctx.onRest?.();
       return executeRestSession(parsed.description, ctx.addInfo);
-    case "web_search":
-      return executeSearch(parsed.query, ctx.search);
     case "update_config":
       return executeUpdateConfig(parsed, ctx.refreshPrompt ?? (() => {}));
     case "think":

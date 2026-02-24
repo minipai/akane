@@ -37,7 +37,7 @@ export function getConversationMessages(db: Db, conversationId: string): ChatEnt
     .all();
 
   return rows.map((row) => {
-    const message: Message = { role: row.role as "user" | "assistant", content: row.content ?? "" };
+    const message: Message = { role: row.role as Message["role"], content: row.content ?? "" };
     const entry: ChatEntry = { message, ts: new Date(row.createdAt).getTime() };
     if (row.emotion) entry.emotion = row.emotion;
     if (row.label) entry.label = row.label;
@@ -47,12 +47,11 @@ export function getConversationMessages(db: Db, conversationId: string): ChatEnt
 
 export function saveMessage(db: Db, conversationId: string, entry: ChatEntry): void {
   const msg = entry.message;
-  const role = "role" in msg ? (msg.role as string) : "unknown";
-  const content =
-    typeof msg.content === "string" ? msg.content : msg.content ? JSON.stringify(msg.content) : null;
+  const role = msg.role;
+  const content = msg.content;
 
   let toolCalls: string | null = null;
-  if ("tool_calls" in msg && msg.tool_calls) {
+  if (msg.tool_calls) {
     toolCalls = JSON.stringify(msg.tool_calls);
   }
 

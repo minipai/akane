@@ -8,9 +8,10 @@ interface Props {
   onSubmit: (text: string) => void;
   disabled: boolean;
   commands?: SlashCommand[];
+  onMenuChange?: (open: boolean) => void;
 }
 
-export default function InputBar({ onSubmit, disabled, commands = [] }: Props) {
+export default function InputBar({ onSubmit, disabled, commands = [], onMenuChange }: Props) {
   const { exit } = useApp();
   const [value, setValue] = useState("");
   const historyRef = useRef<string[]>([]);
@@ -27,13 +28,18 @@ export default function InputBar({ onSubmit, disabled, commands = [] }: Props) {
     setMenuIndex(filtered.length - 1);
   }
 
+  const setMenu = (open: boolean) => {
+    setMenuOpen(open);
+    onMenuChange?.(open);
+  };
+
   const handleChange = (newValue: string) => {
     setValue(newValue);
     if (newValue.startsWith("/")) {
-      setMenuOpen(true);
+      setMenu(true);
       setMenuIndex(0);
     } else {
-      setMenuOpen(false);
+      setMenu(false);
     }
   };
 
@@ -42,7 +48,7 @@ export default function InputBar({ onSubmit, disabled, commands = [] }: Props) {
     if (_input === "c" && key.ctrl) {
       if (value !== "") {
         setValue("");
-        setMenuOpen(false);
+        setMenu(false);
         historyIndexRef.current = -1;
       } else {
         exit();
@@ -61,7 +67,7 @@ export default function InputBar({ onSubmit, disabled, commands = [] }: Props) {
         return;
       }
       if (key.escape) {
-        setMenuOpen(false);
+        setMenu(false);
         setValue("");
         return;
       }
@@ -69,7 +75,7 @@ export default function InputBar({ onSubmit, disabled, commands = [] }: Props) {
         if (filtered.length > 0) {
           const cmd = filtered[menuIndex];
           setValue(`/${cmd.name}`);
-          setMenuOpen(false);
+          setMenu(false);
         }
         return;
       }
@@ -101,7 +107,7 @@ export default function InputBar({ onSubmit, disabled, commands = [] }: Props) {
       historyIndexRef.current = -1;
       draftRef.current = "";
       setValue("");
-      setMenuOpen(false);
+      setMenu(false);
       onSubmit(cmdText);
       return;
     }
@@ -116,9 +122,6 @@ export default function InputBar({ onSubmit, disabled, commands = [] }: Props) {
   return (
     <Box flexDirection="column">
       <Text dimColor>{line}</Text>
-      {menuOpen && (
-        <CommandMenu commands={commands} filtered={filtered} menuIndex={menuIndex} />
-      )}
       <Box>
         <Text color="green" bold>
           {"❯ "}
@@ -136,6 +139,9 @@ export default function InputBar({ onSubmit, disabled, commands = [] }: Props) {
         )}
       </Box>
       <Text dimColor>{line}</Text>
+      {menuOpen && (
+        <CommandMenu commands={commands} filtered={filtered} menuIndex={menuIndex} />
+      )}
     </Box>
   );
 }

@@ -39,6 +39,7 @@ export default function OutfitMenu({ outfits, currentName, onSelect, onCancel }:
     <Box flexDirection="column">
       <Text dimColor>{line}</Text>
       <Text bold> Select outfit:</Text>
+      <Text dimColor>{line}</Text>
       {outfits.map((o, i) => {
         const selected = i === index;
         const isCurrent = o.name === currentName;
@@ -56,7 +57,6 @@ export default function OutfitMenu({ outfits, currentName, onSelect, onCancel }:
         );
       })}
       <Text dimColor> ↑↓ navigate · Enter select · Esc cancel</Text>
-      <Text dimColor>{line}</Text>
     </Box>
   );
 }

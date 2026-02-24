@@ -72,6 +72,7 @@ export default function App({ agent, dispatch, model }: Props) {
   const [pendingApproval, setPendingApproval] =
     useState<ToolApprovalRequest | null>(null);
   const [outfitSelecting, setOutfitSelecting] = useState(false);
+  const [cmdMenuOpen, setCmdMenuOpen] = useState(false);
   const [, setVitalsTick] = useState(0);
 
   const mergeEntries = useCallback((): Entry[] => {
@@ -194,9 +195,9 @@ export default function App({ agent, dispatch, model }: Props) {
       ) : pendingApproval ? (
         <ApprovalBar onApproval={handleApproval} />
       ) : (
-        <InputBar onSubmit={handleSubmit} disabled={loading} commands={dispatch.commands} />
+        <InputBar onSubmit={handleSubmit} disabled={loading} commands={dispatch.commands} onMenuChange={setCmdMenuOpen} />
       )}
-      <StatusBar vitals={agent.vitals} model={model} />
+      {!cmdMenuOpen && !outfitSelecting && <StatusBar vitals={agent.vitals} model={model} />}
     </Box>
   );
 }

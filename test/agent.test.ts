@@ -8,7 +8,8 @@ import { isNull, desc, eq } from "drizzle-orm";
 import * as schema from "../src/db/schema.js";
 import { conversations, messages, config as configTable } from "../src/db/schema.js";
 import type { Db } from "../src/db/db.js";
-import type { ChatClient, ChatEntry } from "../src/types.js";
+import type { ChatClient, ChatEntry, Message, Entry } from "../src/types.js";
+import { isInfo } from "../src/types.js";
 import type { Cache } from "../src/boot/cache.js";
 import { Agent } from "../src/agent/agent.js";
 import { getConfig, setConfig, getAllConfig, getConfigWithDefault, getConfigNumber } from "../src/db/config.js";
@@ -273,8 +274,8 @@ describe("Agent", () => {
 
       // Inspect what was passed to client.chat
       const callArgs = vi.mocked(client.chat).mock.calls[0][0];
-      const devMessages = callArgs.messages.filter((m: any) => m.role === "developer");
-      const nudge = devMessages.find((m: any) =>
+      const devMessages = callArgs.messages.filter((m) => m.role === "developer");
+      const nudge = devMessages.find((m) =>
         typeof m.content === "string" && m.content.includes("What is your name?"),
       );
       expect(nudge).toBeTruthy();
@@ -289,8 +290,8 @@ describe("Agent", () => {
       await agent.run("hey");
 
       const callArgs = vi.mocked(client.chat).mock.calls[0][0];
-      const devMessages = callArgs.messages.filter((m: any) => m.role === "developer");
-      const nudge = devMessages.find((m: any) =>
+      const devMessages = callArgs.messages.filter((m) => m.role === "developer");
+      const nudge = devMessages.find((m) =>
         typeof m.content === "string" && m.content.includes("Greet the user"),
       );
       expect(nudge).toBeTruthy();
@@ -304,9 +305,9 @@ describe("Agent", () => {
       await agent.run("Can you explain quantum computing to me in detail?");
 
       const callArgs = vi.mocked(client.chat).mock.calls[0][0];
-      const devMessages = callArgs.messages.filter((m: any) => m.role === "developer");
+      const devMessages = callArgs.messages.filter((m) => m.role === "developer");
       // Only the vitals hint should be a developer message, not the nudge
-      const nudge = devMessages.find((m: any) =>
+      const nudge = devMessages.find((m) =>
         typeof m.content === "string" &&
         (m.content.includes("Greet the user") || m.content.includes("you MUST ask")),
       );
@@ -332,11 +333,11 @@ describe("Agent", () => {
       // Find the last user message index (the "yo" message)
       let lastUserIdx = -1;
       for (let i = msgs.length - 1; i >= 0; i--) {
-        if ((msgs[i] as any).role === "user") { lastUserIdx = i; break; }
+        if (msgs[i].role === "user") { lastUserIdx = i; break; }
       }
       // No developer nudge should appear after the second user message
       const msgsAfterUser = msgs.slice(lastUserIdx + 1);
-      const nudge = msgsAfterUser.find((m: any) =>
+      const nudge = msgsAfterUser.find((m) =>
         m.role === "developer" &&
         typeof m.content === "string" &&
         (m.content.includes("Greet the user") || m.content.includes("you MUST ask")),
@@ -374,7 +375,7 @@ describe("Agent", () => {
       // Auto-approve when asked
       agent.setOnToolApproval(({ resolve }) => resolve(true));
 
-      const activityLog: any[] = [];
+      const activityLog: { name: string; args: string; result: string | null }[] = [];
       agent.setOnToolActivity((a) => activityLog.push(a));
 
       vi.mocked(client.chat)
@@ -412,7 +413,7 @@ describe("Agent", () => {
       // Check that the tool result message contains denial
       const msgs = agent.getMessages();
       const toolMsg = msgs.find(
-        (m: any) => m.role === "tool" && typeof m.content === "string" && m.content.includes("denied"),
+        (m) => m.role === "tool" && typeof m.content === "string" && m.content.includes("denied"),
       );
       expect(toolMsg).toBeTruthy();
     });
@@ -447,7 +448,7 @@ describe("Agent", () => {
       agent.addInfo({ kind: "info", label: "test", content: "hello world", ts: Date.now() });
 
       const entries = agent.getEntries();
-      const info = entries.find((e: any) => e.kind === "info" && e.content === "hello world");
+      const info = entries.find((e) => e.kind === "info" && e.content === "hello world");
       expect(info).toBeTruthy();
     });
 
@@ -466,12 +467,12 @@ describe("Agent", () => {
       agent.start();
 
       const msgsBefore = agent.getMessages();
-      const systemBefore = (msgsBefore[0] as any).content;
+      const systemBefore = msgsBefore[0].content;
 
       agent.refreshPrompt();
 
       const msgsAfter = agent.getMessages();
-      const systemAfter = (msgsAfter[0] as any).content;
+      const systemAfter = msgsAfter[0].content;
       // Should be a string (rebuilt prompt) — same value since nothing changed,
       // but the important thing is it didn't crash and is still a valid prompt
       expect(typeof systemAfter).toBe("string");
@@ -520,12 +521,12 @@ describe("Agent", () => {
 
       // The developer message should contain the intro prompt
       const callArgs = vi.mocked(client.chat).mock.calls[0][0];
-      const devMsgs = callArgs.messages.filter((m: any) => m.role === "developer");
-      expect(devMsgs.some((m: any) => m.content.includes("Introduce yourself"))).toBe(true);
+      const devMsgs = callArgs.messages.filter((m) => m.role === "developer");
+      expect(devMsgs.some((m) => m.content.includes("Introduce yourself"))).toBe(true);
 
       // Entry should carry the /intro label
       const entries = agent.getEntries();
-      const status = entries.find((e: any) => e.message?.role === "status" && e.message?.content?.includes("/intro"));
+      const status = entries.find((e) => e.message?.role === "status" && e.message?.content?.includes("/intro"));
       expect(status).toBeTruthy();
     });
 
@@ -539,11 +540,11 @@ describe("Agent", () => {
       expect(result).toBe("*twirls*");
 
       const callArgs = vi.mocked(client.chat).mock.calls[0][0];
-      const devMsgs = callArgs.messages.filter((m: any) => m.role === "developer");
-      expect(devMsgs.some((m: any) => m.content.includes("looks at you"))).toBe(true);
+      const devMsgs = callArgs.messages.filter((m) => m.role === "developer");
+      expect(devMsgs.some((m) => m.content.includes("looks at you"))).toBe(true);
 
       const entries = agent.getEntries();
-      const status = entries.find((e: any) => e.message?.role === "status" && e.message?.content?.includes("/look"));
+      const status = entries.find((e) => e.message?.role === "status" && e.message?.content?.includes("/look"));
       expect(status).toBeTruthy();
     });
 
@@ -565,7 +566,7 @@ describe("Agent", () => {
 
       // Should have a status entry
       const entries = agent.getEntries();
-      const status = entries.find((e: any) => e.message?.role === "status");
+      const status = entries.find((e) => e.message?.role === "status");
       expect(status).toBeTruthy();
 
       // Wait for fire-and-forget rest() to complete
@@ -586,11 +587,11 @@ describe("Agent", () => {
       expect(result).toBe("Love this dress!");
 
       const callArgs = vi.mocked(client.chat).mock.calls[0][0];
-      const devMsgs = callArgs.messages.filter((m: any) => m.role === "developer");
-      expect(devMsgs.some((m: any) => m.content.includes("summer dress"))).toBe(true);
+      const devMsgs = callArgs.messages.filter((m) => m.role === "developer");
+      expect(devMsgs.some((m) => m.content.includes("summer dress"))).toBe(true);
 
       const entries = agent.getEntries();
-      const status = entries.find((e: any) => e.message?.role === "status" && e.message?.content?.includes("/outfit"));
+      const status = entries.find((e) => e.message?.role === "status" && e.message?.content?.includes("/outfit"));
       expect(status).toBeTruthy();
     });
   });
@@ -650,9 +651,9 @@ describe("Agent", () => {
 
       const entries = agent.getEntries();
       const assistantEntries = entries.filter(
-        (e: any) => e.message?.role === "assistant" && e.message.content,
+        (e) => e.message?.role === "assistant" && e.message.content,
       );
-      expect(assistantEntries.some((e: any) => e.message.content === "Sweet dreams!")).toBe(true);
+      expect(assistantEntries.some((e) => e.message.content === "Sweet dreams!")).toBe(true);
     });
   });
 
@@ -721,7 +722,7 @@ describe("Agent", () => {
 
       // The user message should still be in the LLM messages
       const msgs = agent.getMessages();
-      const userMsgs = msgs.filter((m: any) => m.role === "user" && m.content === "my question");
+      const userMsgs = msgs.filter((m) => m.role === "user" && m.content === "my question");
       expect(userMsgs).toHaveLength(1);
     });
 
@@ -744,10 +745,10 @@ describe("Agent", () => {
 
       // Should only have: system, user, new assistant
       const msgs = agent.getMessages();
-      const toolMsgs = msgs.filter((m: any) => m.role === "tool");
+      const toolMsgs = msgs.filter((m) => m.role === "tool");
       expect(toolMsgs).toHaveLength(0);
 
-      const assistantMsgs = msgs.filter((m: any) => m.role === "assistant");
+      const assistantMsgs = msgs.filter((m) => m.role === "assistant");
       expect(assistantMsgs).toHaveLength(1);
       expect(assistantMsgs[0].content).toBe("Different answer");
     });
@@ -794,7 +795,7 @@ describe("Agent", () => {
       const agent = makeAgent();
       agent.start();
 
-      const activityLog: any[] = [];
+      const activityLog: { name: string; args: string; result: string | null }[] = [];
       agent.setOnToolActivity((a) => activityLog.push(a));
 
       vi.mocked(client.chat)
@@ -825,7 +826,7 @@ describe("Agent", () => {
 
       const msgs = agent.getMessages();
       const toolMsg = msgs.find(
-        (m: any) => m.role === "tool" && m.content === "OK",
+        (m) => m.role === "tool" && m.content === "OK",
       );
       expect(toolMsg).toBeTruthy();
     });
@@ -1028,9 +1029,9 @@ describe("Agent", () => {
       await agent.configure();
 
       const callArgs = vi.mocked(client.chat).mock.calls[0][0];
-      const devMsgs = callArgs.messages.filter((m: any) => m.role === "developer");
+      const devMsgs = callArgs.messages.filter((m) => m.role === "developer");
       const configMsg = devMsgs.find(
-        (m: any) =>
+        (m) =>
           m.content.includes("kana_name") &&
           m.content.includes("かな") &&
           m.content.includes("Art") &&
@@ -1048,7 +1049,7 @@ describe("Agent", () => {
       await agent.configure();
 
       const entries = agent.getEntries();
-      const status = entries.find((e: any) => e.message?.role === "status" && e.message?.content?.includes("/config"));
+      const status = entries.find((e) => e.message?.role === "status" && e.message?.content?.includes("/config"));
       expect(status).toBeTruthy();
     });
   });
@@ -1091,7 +1092,7 @@ describe("Agent", () => {
 
       const msgs = agent.getMessages();
       const toolMsg = msgs.find(
-        (m: any) => m.role === "tool" && m.content === "No matching memories found.",
+        (m) => m.role === "tool" && m.content === "No matching memories found.",
       );
       expect(toolMsg).toBeTruthy();
     });
@@ -1120,7 +1121,7 @@ describe("Agent", () => {
 
       const msgs = agent.getMessages();
       const toolMsg = msgs.find(
-        (m: any) =>
+        (m) =>
           m.role === "tool" &&
           typeof m.content === "string" &&
           m.content.includes("cool project") &&
@@ -1133,7 +1134,7 @@ describe("Agent", () => {
       const agent = makeAgent();
       agent.start();
 
-      const activityLog: any[] = [];
+      const activityLog: { name: string; args: string; result: string | null }[] = [];
       agent.setOnToolActivity((a) => activityLog.push(a));
 
       vi.mocked(client.chat)
@@ -1188,7 +1189,7 @@ describe("Agent", () => {
 
       const msgs = agent.getMessages();
       const toolMsg = msgs.find(
-        (m: any) => m.role === "tool" && typeof m.content === "string" && m.content.includes('"name"'),
+        (m) => m.role === "tool" && typeof m.content === "string" && m.content.includes('"name"'),
       );
       expect(toolMsg).toBeTruthy();
     });
@@ -1209,7 +1210,7 @@ describe("Agent", () => {
 
       const msgs = agent.getMessages();
       const toolMsg = msgs.find(
-        (m: any) => m.role === "tool" && typeof m.content === "string" && m.content.includes("Error reading file"),
+        (m) => m.role === "tool" && typeof m.content === "string" && m.content.includes("Error reading file"),
       );
       expect(toolMsg).toBeTruthy();
     });
@@ -1218,7 +1219,7 @@ describe("Agent", () => {
       const agent = makeAgent();
       agent.start();
 
-      const approvalCb = vi.fn(({ resolve }: any) => resolve(true));
+      const approvalCb = vi.fn(({ resolve }: { resolve: (v: boolean) => void }) => resolve(true));
       agent.setOnToolApproval(approvalCb);
 
       vi.mocked(client.chat)
@@ -1253,7 +1254,7 @@ describe("Agent", () => {
 
       const msgs = agent.getMessages();
       const toolMsg = msgs.find(
-        (m: any) => m.role === "tool" && typeof m.content === "string" && m.content.includes("bytes"),
+        (m) => m.role === "tool" && typeof m.content === "string" && m.content.includes("bytes"),
       );
       expect(toolMsg).toBeTruthy();
 
@@ -1280,7 +1281,7 @@ describe("Agent", () => {
 
       const msgs = agent.getMessages();
       const toolMsg = msgs.find(
-        (m: any) => m.role === "tool" && typeof m.content === "string" && m.content.includes("denied"),
+        (m) => m.role === "tool" && typeof m.content === "string" && m.content.includes("denied"),
       );
       expect(toolMsg).toBeTruthy();
     });
@@ -1289,7 +1290,7 @@ describe("Agent", () => {
       const agent = makeAgent();
       agent.start();
 
-      const activityLog: any[] = [];
+      const activityLog: { name: string; args: string; result: string | null }[] = [];
       agent.setOnToolActivity((a) => activityLog.push(a));
 
       vi.mocked(client.chat)

@@ -17,8 +17,6 @@ export const updateConfigToolDef = zodFunction({
   parameters: updateConfigSchema,
 });
 
-import type { z } from "zod";
-
 export function executeUpdateConfig(
   params: z.infer<typeof updateConfigSchema>,
   refreshPrompt: () => void,

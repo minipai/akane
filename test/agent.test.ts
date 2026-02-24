@@ -1048,6 +1048,103 @@ describe("Agent", () => {
     });
   });
 
+  // ─── Recall tool ─────────────────────────────────────────────
+
+  describe("recall tool", () => {
+    it("recall is auto-approved (no approval callback)", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      const approvalCb = vi.fn();
+      agent.setOnToolApproval(approvalCb);
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc1", name: "recall", args: '{"query":"project"}' },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("I checked my memories."));
+
+      await agent.run("remember that project?");
+      expect(approvalCb).not.toHaveBeenCalled();
+    });
+
+    it("recall returns 'No matching memories found.' when diary is empty", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc1", name: "recall", args: '{"query":"anything"}' },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("Nothing found."));
+
+      await agent.run("recall something");
+
+      const msgs = agent.getMessages();
+      const toolMsg = msgs.find(
+        (m: any) => m.role === "tool" && m.content === "No matching memories found.",
+      );
+      expect(toolMsg).toBeTruthy();
+    });
+
+    it("recall returns matching diary entries", async () => {
+      // Insert a diary entry directly
+      db.insert(schema.diary).values({
+        type: "daily",
+        date: "2026-02-20",
+        summary: "Worked on the cool project together",
+        createdAt: new Date().toISOString(),
+      }).run();
+
+      const agent = makeAgent();
+      agent.start();
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc1", name: "recall", args: '{"query":"cool project"}' },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("Found it!"));
+
+      await agent.run("remember the cool project?");
+
+      const msgs = agent.getMessages();
+      const toolMsg = msgs.find(
+        (m: any) =>
+          m.role === "tool" &&
+          typeof m.content === "string" &&
+          m.content.includes("cool project") &&
+          m.content.includes("[daily 2026-02-20]"),
+      );
+      expect(toolMsg).toBeTruthy();
+    });
+
+    it("recall shows activity in tool panel", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      const activityLog: any[] = [];
+      agent.setOnToolActivity((a) => activityLog.push(a));
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            { id: "tc1", name: "recall", args: '{"query":"test"}' },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("Done."));
+
+      await agent.run("recall test");
+
+      expect(activityLog.some((a) => a.name === "recall")).toBe(true);
+    });
+  });
+
   // ─── File tools ──────────────────────────────────────────────
 
   describe("file tools", () => {

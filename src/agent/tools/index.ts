@@ -21,6 +21,7 @@ import {
   executeReadFile,
   executeWriteFile,
 } from "./file.js";
+import { recallToolDef, executeRecall } from "./recall.js";
 
 export interface ToolContext {
   memory: Memory;
@@ -43,6 +44,7 @@ export const tools: ToolDef[] = [
   thinkToolDef,
   readFileToolDef,
   writeFileToolDef,
+  recallToolDef,
 ];
 
 /** Tools that don't need a follow-up LLM call — their output is the final response. */
@@ -59,6 +61,7 @@ export const autoApprovedTools = new Set([
   "update_config",
   "think",
   "read_file",
+  "recall",
 ]);
 
 export async function executeTool(
@@ -92,6 +95,8 @@ export async function executeTool(
       return executeReadFile(parsed.path);
     case "write_file":
       return executeWriteFile(parsed.path, parsed.content);
+    case "recall":
+      return executeRecall(parsed.query, ctx);
     default:
       return `Unknown tool: ${name}`;
   }

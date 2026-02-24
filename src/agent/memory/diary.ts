@@ -1,5 +1,5 @@
 import type { Compressor } from "../../types.js";
-import { and, eq, gte, lt, desc, isNotNull } from "drizzle-orm";
+import { and, eq, gte, lt, desc, like, isNotNull } from "drizzle-orm";
 import type { Db } from "../../db/db.js";
 import { diary, conversations } from "../../db/schema.js";
 import {
@@ -144,6 +144,22 @@ async function generateYearly(db: Db, compress: Compressor): Promise<void> {
     "Summarize these quarterly diary entries from one year into a concise yearly summary (4-6 sentences). Paint a big-picture view of the year — major milestones, relationship evolution, and growth. Reply with ONLY the summary.",
   );
   if (text) insertDiary(db, "yearly", key, text);
+}
+
+/** Search diary entries by keyword (SQL LIKE on summary). */
+export function searchDiary(
+  db: Db,
+  query: string,
+  limit = 10,
+): { type: DiaryType; date: string; summary: string }[] {
+  const rows = db
+    .select({ type: diary.type, date: diary.date, summary: diary.summary })
+    .from(diary)
+    .where(like(diary.summary, `%${query}%`))
+    .orderBy(desc(diary.date))
+    .limit(limit)
+    .all();
+  return rows as { type: DiaryType; date: string; summary: string }[];
 }
 
 /** Run the full diary generation chain. Safe to fire-and-forget. */

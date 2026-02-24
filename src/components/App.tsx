@@ -44,6 +44,8 @@ function formatToolArgs(name: string, argsJson: string): string {
       }
       case "read_file":
         return parsed.path ?? argsJson;
+      case "recall":
+        return parsed.query ?? argsJson;
       case "write_file":
         return `${parsed.path} (${parsed.content?.length ?? 0} chars)`;
       default:

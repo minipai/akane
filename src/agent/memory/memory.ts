@@ -3,7 +3,7 @@ import type { Db } from "../../db/db.js";
 import { diary } from "../../db/schema.js";
 import type { ChatEntry, Compressor } from "../../types.js";
 import type { MemoryContext } from "../prompts/index.js";
-import { generateDiary, type DiaryType } from "./diary.js";
+import { generateDiary, searchDiary, type DiaryType } from "./diary.js";
 import * as conv from "./conversations.js";
 import * as facts from "./facts.js";
 import type { Category } from "./facts.js";
@@ -29,6 +29,10 @@ export class Memory {
   // --- Diary ---
 
   async fadeMemories(): Promise<void> { return generateDiary(this.db, this.compress); }
+
+  recall(query: string): { type: DiaryType; date: string; summary: string }[] {
+    return searchDiary(this.db, query);
+  }
 
   getRecentDiaries(type: DiaryType, limit: number): string[] {
     const rows = this.db

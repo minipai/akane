@@ -17,10 +17,27 @@ interface Props {
   menuIndex: number;
 }
 
-export default function CommandMenu({ commands, filtered, menuIndex }: Props) {
+const MAX_VISIBLE = 5;
+
+export default function CommandMenu({ filtered, menuIndex }: Props) {
+  // Scroll window: keep selection visible within MAX_VISIBLE rows
+  let start = 0;
+  if (filtered.length > MAX_VISIBLE) {
+    start = Math.min(
+      Math.max(0, menuIndex - Math.floor(MAX_VISIBLE / 2)),
+      filtered.length - MAX_VISIBLE,
+    );
+  }
+  const visible = filtered.slice(start, start + MAX_VISIBLE);
+
+  const hasUp = start > 0;
+  const hasDown = start + MAX_VISIBLE < filtered.length;
+  const scrollHint = hasUp && hasDown ? "↑↓ scroll" : hasUp ? "↑ scroll" : hasDown ? "↓ scroll" : "";
+
   return (
     <Box flexDirection="column">
-      {filtered.map((cmd, i) => {
+      {visible.map((cmd, vi) => {
+        const i = start + vi;
         const selected = i === menuIndex;
         return (
           <Box key={cmd.name}>
@@ -31,6 +48,7 @@ export default function CommandMenu({ commands, filtered, menuIndex }: Props) {
           </Box>
         );
       })}
+      {scrollHint && <Text dimColor>  {scrollHint}</Text>}
     </Box>
   );
 }

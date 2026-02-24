@@ -72,9 +72,7 @@ export default function App({ agent, dispatch, model }: Props) {
   const [toolActivity, setToolActivity] = useState<ToolActivity | null>(null);
   const [pendingApproval, setPendingApproval] =
     useState<ToolApprovalRequest | null>(null);
-  const [outfitSelecting, setOutfitSelecting] = useState(false);
-  const [actionSelecting, setActionSelecting] = useState(false);
-  const [cmdMenuOpen, setCmdMenuOpen] = useState(false);
+  const [activeMenu, setActiveMenu] = useState<"outfit" | "action" | "cmd" | null>(null);
   const [, setVitalsTick] = useState(0);
 
   const mergeEntries = useCallback((): Entry[] => {
@@ -106,12 +104,8 @@ export default function App({ agent, dispatch, model }: Props) {
       setLoading(false);
       setToolActivity(null);
     });
-    ev.on("outfit:select", () => {
-      setOutfitSelecting(true);
-    });
-    ev.on("action:select", () => {
-      setActionSelecting(true);
-    });
+    ev.on("outfit:select", () => setActiveMenu("outfit"));
+    ev.on("action:select", () => setActiveMenu("action"));
     ev.on("chat:error", (errMsg) => {
       setEntries((prev) => [
         ...prev,
@@ -137,29 +131,23 @@ export default function App({ agent, dispatch, model }: Props) {
     [pendingApproval],
   );
 
+  const closeMenu = useCallback(() => setActiveMenu(null), []);
+
   const handleOutfitSelect = useCallback(
     (outfit: { name: string }) => {
-      setOutfitSelecting(false);
+      setActiveMenu(null);
       dispatch.handle(`/outfit ${outfit.name}`);
     },
     [dispatch],
   );
 
-  const handleOutfitCancel = useCallback(() => {
-    setOutfitSelecting(false);
-  }, []);
-
   const handleActionSelect = useCallback(
     (action: string) => {
-      setActionSelecting(false);
+      setActiveMenu(null);
       dispatch.handle(`/me ${action}`);
     },
     [dispatch],
   );
-
-  const handleActionCancel = useCallback(() => {
-    setActionSelecting(false);
-  }, []);
 
   const handleSubmit = useCallback(
     (text: string) => { dispatch.handle(text); },
@@ -202,24 +190,24 @@ export default function App({ agent, dispatch, model }: Props) {
         </Box>
       )}
 
-      {outfitSelecting ? (
+      {activeMenu === "outfit" ? (
         <OutfitMenu
           outfits={outfits}
           currentName={getKv("outfit") ?? DEFAULT_OUTFIT.name}
           onSelect={handleOutfitSelect}
-          onCancel={handleOutfitCancel}
+          onCancel={closeMenu}
         />
-      ) : actionSelecting ? (
+      ) : activeMenu === "action" ? (
         <ActionMenu
           onSelect={handleActionSelect}
-          onCancel={handleActionCancel}
+          onCancel={closeMenu}
         />
       ) : pendingApproval ? (
         <ApprovalBar onApproval={handleApproval} />
       ) : (
-        <InputBar onSubmit={handleSubmit} disabled={loading} commands={dispatch.commands} onMenuChange={setCmdMenuOpen} />
+        <InputBar onSubmit={handleSubmit} disabled={loading} commands={dispatch.commands} onMenuChange={(open) => setActiveMenu(open ? "cmd" : null)} />
       )}
-      {!cmdMenuOpen && !outfitSelecting && !actionSelecting && <StatusBar vitals={agent.vitals} model={model} />}
+      {!activeMenu && <StatusBar vitals={agent.vitals} model={model} />}
     </Box>
   );
 }

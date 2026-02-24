@@ -23,6 +23,9 @@ export default function InputBar({ onSubmit, disabled, commands = [] }: Props) {
   const line = "─".repeat(width);
 
   const filtered = menuOpen ? filterCommands(commands, value.slice(1)) : [];
+  if (menuIndex >= filtered.length && filtered.length > 0) {
+    setMenuIndex(filtered.length - 1);
+  }
 
   const handleChange = (newValue: string) => {
     setValue(newValue);

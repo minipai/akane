@@ -27,7 +27,7 @@ export default function ApprovalBar({ onApproval }: Props) {
     const input = text.trim().toLowerCase();
     if (input === "y" || input === "yes" || input === "") {
       onApproval(true);
-    } else if (input === "n" || input === "no") {
+    } else {
       onApproval(false);
     }
     setValue("");

@@ -90,7 +90,7 @@ export class Scribe {
     }
     if (lastUserIdx < 0) return null;
 
-    const userContent = this.messages[lastUserIdx].content as string;
+    const userContent = this.messages[lastUserIdx].content ?? "";
 
     // Remove everything after the last user message from messages[]
     this.messages.splice(lastUserIdx + 1);
@@ -136,7 +136,7 @@ export class Scribe {
     const prompt =
       systemPrompt ??
       (this.messages[0]?.role === "system"
-        ? (this.messages[0].content as string)
+        ? (this.messages[0].content ?? "")
         : "");
     const msg: Message = { role: "system", content: prompt };
     this.messages = [msg];

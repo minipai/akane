@@ -27,9 +27,12 @@ class OpenAIChatClient implements ChatClient {
       store: false,
     });
 
+    const searched = response.output.some((item) => item.type === "web_search_call");
+
     return {
       message: this.mapResponse(response),
       totalTokens: response.usage?.total_tokens,
+      searched,
     };
   }
 

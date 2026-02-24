@@ -155,10 +155,10 @@ export class Agent {
 
     // Re-run the LLM loop (don't call run() — the user message is already in messages[])
     for (let i = 0; i < MAX_ITERATIONS; i++) {
-      const message = await this.callLLM();
+      const { message, searched } = await this.callLLM();
       if (!message) return "(no response)";
 
-      this.scribe.addMessage(message);
+      this.scribe.addMessage(message, { searched });
 
       const calls = message.tool_calls?.filter((tc) => tc.type === "function");
       if (!calls || calls.length === 0) {
@@ -210,10 +210,10 @@ export class Agent {
     this.isFirstUserMessage = false;
 
     for (let i = 0; i < MAX_ITERATIONS; i++) {
-      const message = await this.callLLM();
+      const { message, searched } = await this.callLLM();
       if (!message) return "(no response)";
 
-      this.scribe.addMessage(message);
+      this.scribe.addMessage(message, { searched });
 
       const calls = message.tool_calls?.filter((tc) => tc.type === "function");
       if (!calls || calls.length === 0) {
@@ -235,18 +235,18 @@ export class Agent {
     return "(max iterations reached)";
   }
 
-  private async callLLM(): Promise<Message | null> {
+  private async callLLM(): Promise<{ message: Message | null; searched: boolean }> {
     const messages: Message[] = [
       ...this.scribe.getMessages(),
       { role: "developer", content: this.vitals.buildHints() },
     ];
 
-    const { message, totalTokens } = await this.client.chat({ messages, tools });
+    const { message, totalTokens, searched } = await this.client.chat({ messages, tools });
 
     if (totalTokens) {
       this.vitals.addTokens(totalTokens);
     }
 
-    return message;
+    return { message, searched: searched ?? false };
   }
 }

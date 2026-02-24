@@ -29,6 +29,7 @@ export interface ChatClient {
   }): Promise<{
     message: Message | null;
     totalTokens?: number;
+    searched?: boolean;
   }>;
 
   compress(system: string, user: string): Promise<string>;
@@ -41,6 +42,7 @@ export interface ChatEntry {
   message: Message;
   emotion?: string;
   label?: string;
+  searched?: boolean;
   ts?: number;
 }
 

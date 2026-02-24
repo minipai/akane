@@ -47,11 +47,12 @@ export class Scribe {
     this.currentEmotion = emotion;
   }
 
-  addMessage(message: Message, opts?: { label?: string }): void {
+  addMessage(message: Message, opts?: { label?: string; searched?: boolean }): void {
     this.messages.push(message);
     const entry: ChatEntry = { message, ts: Date.now() };
     if (message.role === "assistant") {
       entry.emotion = this.currentEmotion;
+      if (opts?.searched) entry.searched = true;
     }
     if (opts?.label) entry.label = opts.label;
     this.entries.push(entry);

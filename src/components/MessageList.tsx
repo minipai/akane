@@ -67,17 +67,24 @@ export default function MessageList({ entries }: Props) {
         const emoji = entry.emotion ? EMOTION_EMOJI[entry.emotion] : undefined;
 
         return (
-          <Box key={i} marginBottom={0}>
-            <Box flexShrink={0}>
-              <Text color={isAssistant ? "#ff77ff" : "green"} bold>
-                {isAssistant ? getConfigWithDefault("kana_name") : getConfigWithDefault("user_name")}{" "}
-              </Text>
-              {isAssistant && emoji && <Text color="#ff77ff">{emoji} </Text>}
-              <Text color={isAssistant ? "#ff77ff" : "green"} bold>
-                :{" "}
-              </Text>
+          <Box key={i} flexDirection="column" marginBottom={0}>
+            {isAssistant && entry.searched && (
+              <Box>
+                <Text dimColor>{getConfigWithDefault("kana_name")} searched the web</Text>
+              </Box>
+            )}
+            <Box>
+              <Box flexShrink={0}>
+                <Text color={isAssistant ? "#ff77ff" : "green"} bold>
+                  {isAssistant ? getConfigWithDefault("kana_name") : getConfigWithDefault("user_name")}{" "}
+                </Text>
+                {isAssistant && emoji && <Text color="#ff77ff">{emoji} </Text>}
+                <Text color={isAssistant ? "#ff77ff" : "green"} bold>
+                  :{" "}
+                </Text>
+              </Box>
+              <Text wrap="wrap">{content}</Text>
             </Box>
-            <Text wrap="wrap">{content}</Text>
           </Box>
         );
       })}

@@ -166,7 +166,7 @@ export class Agent {
     const fmt = (key: string) => getConfig(key) ?? "(unset)";
     const fmtDef = (key: string) => getConfigWithDefault(key);
     return this.run(
-      `The user wants to view/change persona settings. Current values:\n- kana_name: ${fmt("kana_name")}\n- user_name: ${fmt("user_name")}\n- user_nickname: ${fmt("user_nickname")}\n- daily_budget: $${fmtDef("daily_budget")} USD\n- session_token_limit: ${fmtDef("session_token_limit")} tokens\n\nShow them these current values. Values marked (unset) have not been configured yet — tell the user they are not set. Ask what they'd like to change. If they want to change something, call update_config with the new values. Use the conversation language.`,
+      `The user wants to view/change persona settings. Current values:\n- kana_name: ${fmt("kana_name")}\n- user_name: ${fmt("user_name")}\n- user_nickname: ${fmt("user_nickname")}\n- language: ${fmt("language")}\n- daily_budget: $${fmtDef("daily_budget")} USD\n- session_token_limit: ${fmtDef("session_token_limit")} tokens\n\nShow them these current values. Values marked (unset) have not been configured yet — tell the user they are not set. Ask what they'd like to change. If they want to change something, call update_config with the new values. Use the conversation language.`,
       { hidden: true },
     );
   }

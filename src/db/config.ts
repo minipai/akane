@@ -8,6 +8,7 @@ const DEFAULTS: Record<string, string> = {
   user_nickname: "ご主人様",
   daily_budget: "1",
   session_token_limit: "100000",
+  language: "English",
 };
 
 /** Get a config value from DB, falling back to a built-in default. */

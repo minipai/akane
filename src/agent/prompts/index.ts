@@ -17,6 +17,7 @@ function replaceVars(text: string): string {
     "{{KANA_NAME}}": getConfigWithDefault("kana_name"),
     "{{USER_NAME}}": getConfigWithDefault("user_name"),
     "{{USER_NICKNAME}}": getConfigWithDefault("user_nickname"),
+    "{{LANGUAGE}}": getConfigWithDefault("language"),
   };
   let result = text;
   for (const [placeholder, value] of Object.entries(vars)) {

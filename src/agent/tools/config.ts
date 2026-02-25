@@ -6,6 +6,7 @@ export const updateConfigSchema = z.object({
   kana_name: z.string().nullable().optional().describe("Kana's display name"),
   user_name: z.string().nullable().optional().describe("The user's real name"),
   user_nickname: z.string().nullable().optional().describe("How Kana addresses the user"),
+  language: z.string().nullable().optional().describe("Language for Kana to respond in (e.g. English, 日本語)"),
   daily_budget: z.number().nullable().optional().describe("Daily API budget in USD"),
   session_token_limit: z.number().nullable().optional().describe("Max tokens per session"),
 });
@@ -34,6 +35,10 @@ export function executeUpdateConfig(
   if (params.user_nickname) {
     setConfig("user_nickname", params.user_nickname);
     updated.push(`user_nickname → ${params.user_nickname}`);
+  }
+  if (params.language) {
+    setConfig("language", params.language);
+    updated.push(`language → ${params.language}`);
   }
   if (params.daily_budget != null) {
     setConfig("daily_budget", String(params.daily_budget));

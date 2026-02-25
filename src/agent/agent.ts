@@ -153,7 +153,7 @@ export class Agent {
   /** End the current session — no LLM call, just save and reset. */
   beginRest(): void {
     this.ensureConversation();
-    this.scribe.addMessage({ role: "status", content: `${getConfigWithDefault("kana_name")} quietly tucking away today's memories…` });
+    this.scribe.addMessage({ role: "status", content: `(-_-) zzZ ${getConfigWithDefault("kana_name")} quietly tucking away today's memories…` });
     this.vitals.setTotalTokens(0);
     // Fire-and-forget: summary generation happens in the background
     this.rest();

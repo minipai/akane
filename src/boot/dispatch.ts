@@ -15,6 +15,7 @@ export interface DispatchEvents {
   "action:select": [];
   "play:select": [];
   "look:select": [];
+  rest: [];
 }
 
 export interface Dispatch {
@@ -82,6 +83,7 @@ export function createDispatch(agent: {
       case "rest":
         agent.beginRest();
         events.emit("chat:after");
+        events.emit("rest");
         return;
       case "intro":
         return runCommand(() => agent.introduce());

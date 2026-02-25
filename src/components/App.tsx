@@ -41,6 +41,7 @@ function formatToolArgs(name: string, argsJson: string): string {
         if (parsed.kana_name) parts.push(`kana_name=${parsed.kana_name}`);
         if (parsed.user_name) parts.push(`user_name=${parsed.user_name}`);
         if (parsed.user_nickname) parts.push(`user_nickname=${parsed.user_nickname}`);
+        if (parsed.language) parts.push(`language=${parsed.language}`);
         if (parsed.daily_budget != null) parts.push(`daily_budget=${parsed.daily_budget}`);
         if (parsed.session_token_limit != null) parts.push(`session_token_limit=${parsed.session_token_limit}`);
         return parts.join(", ") || argsJson;
@@ -105,6 +106,11 @@ export default function App({ agent, dispatch, model }: Props) {
       setEntries(merged);
       setLoading(false);
       setToolActivity(null);
+    });
+    ev.on("rest", () => {
+      // Clear chat history from UI, keeping only the rest status message
+      const all = mergeEntries();
+      displayFrom.current = Math.max(0, all.length - 1);
     });
     ev.on("outfit:select", () => setActiveMenu("outfit"));
     ev.on("action:select", () => setActiveMenu("action"));

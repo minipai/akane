@@ -39,6 +39,7 @@ import {
   executeWriteFile,
 } from "./file.js";
 import { recallToolDef, recallSchema, executeRecall } from "./recall.js";
+import { askUserToolDef } from "./ask-user.js";
 
 export interface ToolContext {
   memory: Memory;
@@ -62,6 +63,7 @@ export const tools: ToolDef[] = [
   readFileToolDef,
   writeFileToolDef,
   recallToolDef,
+  askUserToolDef,
 ];
 
 /** Tools that don't need a follow-up LLM call — their output is the final response. */
@@ -79,6 +81,7 @@ export const autoApprovedTools = new Set([
   "think",
   "read_file",
   "recall",
+  "ask_user",
 ]);
 
 export async function executeTool(
@@ -143,6 +146,8 @@ export async function executeTool(
       const { query } = recallSchema.parse(JSON.parse(args));
       return executeRecall(query, ctx);
     }
+    case "ask_user":
+      return "__ask_user__"; // handled by technician callback
     default:
       return `Unknown tool: ${name}`;
   }

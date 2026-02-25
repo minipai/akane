@@ -1,13 +1,15 @@
-import type { ToolActivity, ToolApprovalRequest, InfoEntry } from "../../types.js";
+import type { ToolActivity, ToolApprovalRequest, ToolSelectRequest, InfoEntry } from "../../types.js";
 import { executeTool, autoApprovedTools, terminalTools } from "../tools/index.js";
 import type { ToolContext } from "../tools/index.js";
+import { askUserSchema } from "../tools/ask-user.js";
 
 export type OnToolActivity = (activity: ToolActivity) => void;
 export type OnToolApproval = (request: ToolApprovalRequest) => void;
+export type OnToolSelect = (request: ToolSelectRequest) => void;
 export type OnEmotionChange = (emotion: string) => void;
 
 /** Tools that run silently (no activity panel shown). */
-const silentTools = new Set(["set_emotion", "describe_agent", "rest_session", "update_config", "think"]);
+const silentTools = new Set(["set_emotion", "describe_agent", "rest_session", "update_config", "think", "ask_user"]);
 
 
 interface ToolResult {
@@ -18,6 +20,7 @@ interface ToolResult {
 export class Technician {
   private onActivity?: OnToolActivity;
   private onApproval?: OnToolApproval;
+  private onSelect?: OnToolSelect;
   private onEmotionChange?: OnEmotionChange;
   private ctx: ToolContext;
 
@@ -38,6 +41,10 @@ export class Technician {
 
   setOnApproval(cb: OnToolApproval): void {
     this.onApproval = cb;
+  }
+
+  setOnSelect(cb: OnToolSelect): void {
+    this.onSelect = cb;
   }
 
   setOnEmotionChange(cb: OnEmotionChange): void {
@@ -79,6 +86,26 @@ export class Technician {
           results.push({ tool_call_id: tc.id, content: denial });
           continue;
         }
+      }
+
+      // ask_user: suspend and wait for user selection via callback
+      if (tc.function.name === "ask_user") {
+        const parsed = askUserSchema.parse(JSON.parse(tc.function.arguments));
+        const selected = this.onSelect
+          ? await new Promise<string>((resolve) => {
+              this.onSelect!({
+                question: parsed.question,
+                options: parsed.options.map((o) => ({
+                  label: o.label,
+                  detail: o.detail ?? undefined,
+                })),
+                allowCustom: parsed.allowCustom,
+                resolve,
+              });
+            })
+          : "(no select handler)";
+        results.push({ tool_call_id: tc.id, content: `User selected: ${selected}` });
+        continue;
       }
 
       const result = await executeTool(tc.function.name, tc.function.arguments, this.ctx);

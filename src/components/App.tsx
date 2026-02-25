@@ -12,7 +12,8 @@ import PlayMenu from "./PlayMenu.js";
 import LookMenu from "./LookMenu.js";
 import StatusBar from "./StatusBar.js";
 import type { Agent } from "../agent/agent.js";
-import type { ChatEntry, ToolActivity, ToolApprovalRequest, Entry } from "../agent/types.js";
+import PickerMenu from "./PickerMenu.js";
+import type { ChatEntry, ToolActivity, ToolApprovalRequest, ToolSelectRequest, Entry } from "../agent/types.js";
 import type { Dispatch } from "../boot/dispatch.js";
 import { outfits, DEFAULT_OUTFIT } from "../agent/prompts/outfits.js";
 import { getKv } from "../db/kv.js";
@@ -52,6 +53,8 @@ function formatToolArgs(name: string, argsJson: string): string {
         return parsed.query ?? argsJson;
       case "write_file":
         return `${parsed.path} (${parsed.content?.length ?? 0} chars)`;
+      case "ask_user":
+        return parsed.question ?? argsJson;
       default:
         return argsJson;
     }
@@ -75,6 +78,8 @@ export default function App({ agent, dispatch, model }: Props) {
   const [toolActivity, setToolActivity] = useState<ToolActivity | null>(null);
   const [pendingApproval, setPendingApproval] =
     useState<ToolApprovalRequest | null>(null);
+  const [pendingSelect, setPendingSelect] =
+    useState<ToolSelectRequest | null>(null);
   const [activeMenu, setActiveMenu] = useState<"outfit" | "action" | "play" | "look" | "cmd" | null>(null);
   const [, setVitalsTick] = useState(0);
 
@@ -85,6 +90,7 @@ export default function App({ agent, dispatch, model }: Props) {
   useEffect(() => {
     agent.setOnToolActivity(setToolActivity);
     agent.setOnToolApproval(setPendingApproval);
+    agent.setOnToolSelect(setPendingSelect);
     agent.vitals.setOnChange(() => setVitalsTick((n) => n + 1));
     agent.vitals.startHpRefresh();
 
@@ -140,6 +146,23 @@ export default function App({ agent, dispatch, model }: Props) {
     },
     [pendingApproval],
   );
+
+  const handleSelect = useCallback(
+    (selected: string) => {
+      if (pendingSelect) {
+        pendingSelect.resolve(selected);
+        setPendingSelect(null);
+      }
+    },
+    [pendingSelect],
+  );
+
+  const handleSelectCancel = useCallback(() => {
+    if (pendingSelect) {
+      pendingSelect.resolve("User cancelled.");
+      setPendingSelect(null);
+    }
+  }, [pendingSelect]);
 
   const closeMenu = useCallback(() => setActiveMenu(null), []);
 
@@ -237,6 +260,14 @@ export default function App({ agent, dispatch, model }: Props) {
         <PlayMenu
           onSelect={handlePlaySelect}
           onCancel={closeMenu}
+        />
+      ) : pendingSelect ? (
+        <PickerMenu
+          title={pendingSelect.question}
+          items={pendingSelect.options}
+          hideCustom={!pendingSelect.allowCustom}
+          onSelect={handleSelect}
+          onCancel={handleSelectCancel}
         />
       ) : pendingApproval ? (
         <ApprovalBar onApproval={handleApproval} />

@@ -1151,6 +1151,145 @@ describe("Agent", () => {
     });
   });
 
+  // ─── ask_user tool ──────────────────────────────────────────
+
+  describe("ask_user tool", () => {
+    it("ask_user is auto-approved (no approval callback)", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      const approvalCb = vi.fn();
+      agent.setOnToolApproval(approvalCb);
+      agent.setOnToolSelect(({ resolve }) => resolve("Pizza"));
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            {
+              id: "tc1",
+              name: "ask_user",
+              args: '{"question":"What do you want?","options":[{"label":"Pizza","detail":null},{"label":"Sushi","detail":null}],"allowCustom":true}',
+            },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("Pizza it is!"));
+
+      await agent.run("recommend dinner");
+      expect(approvalCb).not.toHaveBeenCalled();
+    });
+
+    it("ask_user suspends and returns user selection as tool result", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      agent.setOnToolSelect(({ resolve }) => resolve("Sushi"));
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            {
+              id: "tc1",
+              name: "ask_user",
+              args: '{"question":"Pick a food","options":[{"label":"Pizza","detail":null},{"label":"Sushi","detail":null}],"allowCustom":false}',
+            },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("Great choice!"));
+
+      await agent.run("what should I eat?");
+
+      const msgs = agent.getMessages();
+      const toolMsg = msgs.find(
+        (m) => m.role === "tool" && typeof m.content === "string" && m.content.includes("Sushi"),
+      );
+      expect(toolMsg).toBeTruthy();
+      expect(toolMsg!.content).toBe("User selected: Sushi");
+    });
+
+    it("ask_user passes question and options to select callback", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      let receivedRequest: { question: string; options: { label: string; detail?: string }[]; allowCustom: boolean } | null = null;
+      agent.setOnToolSelect((req) => {
+        receivedRequest = { question: req.question, options: req.options, allowCustom: req.allowCustom };
+        req.resolve("Option A");
+      });
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            {
+              id: "tc1",
+              name: "ask_user",
+              args: '{"question":"Pick one","options":[{"label":"Option A","detail":"First"},{"label":"Option B","detail":null}],"allowCustom":false}',
+            },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("Done."));
+
+      await agent.run("choose");
+
+      expect(receivedRequest).not.toBeNull();
+      expect(receivedRequest!.question).toBe("Pick one");
+      expect(receivedRequest!.options).toHaveLength(2);
+      expect(receivedRequest!.options[0]).toEqual({ label: "Option A", detail: "First" });
+      expect(receivedRequest!.options[1]).toEqual({ label: "Option B", detail: undefined });
+      expect(receivedRequest!.allowCustom).toBe(false);
+    });
+
+    it("ask_user is silent (no activity callback)", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      const activityLog: { name: string; args: string; result: string | null }[] = [];
+      agent.setOnToolActivity((a) => activityLog.push(a));
+      agent.setOnToolSelect(({ resolve }) => resolve("X"));
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            {
+              id: "tc1",
+              name: "ask_user",
+              args: '{"question":"Pick","options":[{"label":"X","detail":null}],"allowCustom":true}',
+            },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("OK."));
+
+      await agent.run("ask me");
+      expect(activityLog.filter((a) => a.name === "ask_user")).toHaveLength(0);
+    });
+
+    it("ask_user cancellation returns cancel message", async () => {
+      const agent = makeAgent();
+      agent.start();
+
+      agent.setOnToolSelect(({ resolve }) => resolve("User cancelled."));
+
+      vi.mocked(client.chat)
+        .mockResolvedValueOnce(
+          toolCallResponse([
+            {
+              id: "tc1",
+              name: "ask_user",
+              args: '{"question":"Pick","options":[{"label":"A","detail":null}],"allowCustom":true}',
+            },
+          ]),
+        )
+        .mockResolvedValueOnce(textResponse("No problem."));
+
+      await agent.run("pick something");
+
+      const msgs = agent.getMessages();
+      const toolMsg = msgs.find(
+        (m) => m.role === "tool" && typeof m.content === "string" && m.content.includes("cancelled"),
+      );
+      expect(toolMsg).toBeTruthy();
+    });
+  });
+
   // ─── File tools ──────────────────────────────────────────────
 
   describe("file tools", () => {

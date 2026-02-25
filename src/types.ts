@@ -69,6 +69,13 @@ export interface ToolApprovalRequest {
   resolve: (approved: boolean) => void;
 }
 
+export interface ToolSelectRequest {
+  question: string;
+  options: { label: string; detail?: string }[];
+  allowCustom: boolean;
+  resolve: (selected: string) => void;
+}
+
 export interface Config {
   apiKey: string;
   baseUrl: string;
